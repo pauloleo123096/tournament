@@ -1,41 +1,147 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>LVLUP Live Scoreboard</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LVLUP MLBB Tournament Hub</title>
     <style>
-        body { font-family: sans-serif; padding: 40px; background-color: #f4f4f9; }
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 400px; margin-bottom: 20px; }
-        .score { font-size: 32px; font-weight: bold; color: #2c3e50; }
-        .players { font-size: 20px; margin-bottom: 10px; }
-        button { padding: 10px 20px; font-size: 14px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        /* === LVLUP BRAND VARIABLES (Inlined for now) === */
+        :root { 
+            --lvlup-bg: #0a0f16;         /* Deep dark background */
+            --lvlup-panel: #131c28;      /* Slightly lighter card background */
+            --lvlup-accent: #00ffcc;     /* Vibrant gaming cyan/green accent */
+            --lvlup-text: #f8fafc;       /* Clean white text */
+            --lvlup-text-muted: #64748b; /* Gray text for secondary info */
+            --lvlup-danger: #ef4444;     /* Red for the LIVE badge */
+        }
+
+        /* === GLOBAL STYLES === */
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: var(--lvlup-bg); 
+            color: var(--lvlup-text); 
+            margin: 0; 
+            padding: 20px; 
+        }
+        
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            display: grid; 
+            grid-template-columns: 1fr; 
+            gap: 20px; 
+        }
+        
+        /* === YOUTUBE EMBED === */
+        .video-container { 
+            position: relative; 
+            padding-bottom: 56.25%; 
+            height: 0; 
+            overflow: hidden; 
+            border-radius: 12px; 
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5); 
+            border: 1px solid #1e293b;
+        }
+        .video-container iframe { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            border: none; 
+        }
+        
+        /* === PANELS & SCOREBOARD === */
+        .panel { 
+            background-color: var(--lvlup-panel); 
+            padding: 20px; 
+            border-radius: 12px; 
+            border-top: 4px solid var(--lvlup-accent); 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+        
+        h2, h3 { margin-top: 0; }
+        
+        .live-badge { 
+            background-color: var(--lvlup-danger); 
+            color: white; 
+            padding: 4px 8px; 
+            border-radius: 4px; 
+            font-size: 12px; 
+            font-weight: bold; 
+            animation: pulse 2s infinite; 
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        
+        .match-up { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-top: 20px; 
+            font-size: 24px; 
+            font-weight: bold; 
+        }
+        
+        .team { flex: 1; text-align: center; }
+        .vs { color: var(--lvlup-text-muted); font-size: 18px; }
+        .score { 
+            font-size: 48px; 
+            color: var(--lvlup-accent); 
+            text-shadow: 0 0 10px rgba(0, 255, 204, 0.3); 
+        }
+        
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        
+        /* === DESKTOP LAYOUT === */
+        @media (min-width: 900px) {
+            .container { grid-template-columns: 2fr 1fr; }
+        }
     </style>
-    
+
     <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
     <script>eruda.init();</script>
 </head>
 <body>
-    <h1>Live Tournament Feed</h1>
-    
-    <div class="card" id="scoreboard">
-        <h3 id="displayGame" style="color: #e74c3c; margin-top: 0;">Loading Game...</h3>
-        <div class="players">
-            <span id="displayP1">Player 1</span> 
-            <b>VS</b> 
-            <span id="displayP2">Player 2</span>
+
+    <div class="container">
+        <div class="main-content">
+            <h2>LVLUP MLBB Invitational</h2>
+            <div class="video-container">
+                <iframe src="https://www.youtube.com/embed/live_stream?channel=YOUR_CHANNEL_ID" allowfullscreen></iframe>
+            </div>
         </div>
-        <div class="score">
-            <span id="displayScoreP1">0</span> - <span id="displayScoreP2">0</span>
+
+        <div class="sidebar">
+            <div class="panel">
+                <h3>Current Match <span class="live-badge">LIVE</span></h3>
+                <p id="gamePhase" style="color: var(--lvlup-text-muted); margin: 0; font-style: italic;">Connecting to arena...</p>
+                
+                <div class="match-up">
+                    <div class="team">
+                        <div id="team1Name">Team A</div>
+                        <div class="score" id="team1Score">0</div>
+                    </div>
+                    <div class="vs">VS</div>
+                    <div class="team">
+                        <div id="team2Name">Team B</div>
+                        <div class="score" id="team2Score">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel" style="margin-top: 20px;">
+                <h3>Live Leaderboard</h3>
+                <p style="color: var(--lvlup-text-muted); font-size: 14px;">(Standings module pending...)</p>
+            </div>
         </div>
-        <p>Status: <span id="displayStatus" style="font-style: italic;">...</span></p>
     </div>
 
-    <button id="startMatchBtn">Reset Match Data</button>
-
     <script type="module">
-      // Notice we added 'onSnapshot' to this import!
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-      import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+      import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
+      // Your exact setup keys
       const firebaseConfig = {
         apiKey: "AIzaSyC7n0itej-hIh4M4pGQBs-QQrML-f-sNwM",
         authDomain: "lvlupgames-backend.firebaseapp.com",
@@ -49,45 +155,24 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         
-        // 1. THE LISTENER (The Magic Part)
-        // We tell Firebase to watch the "grand_finals" document constantly
+        // Listen to your existing grand_finals document!
         const matchRef = doc(db, "matches", "grand_finals");
         
         onSnapshot(matchRef, (snapshot) => {
           if (snapshot.exists()) {
             const data = snapshot.data();
-            
-            // Push the database data directly into the HTML elements
-            document.getElementById("displayGame").innerText = data.game;
-            document.getElementById("displayP1").innerText = data.player1;
-            document.getElementById("displayP2").innerText = data.player2;
-            document.getElementById("displayScoreP1").innerText = data.score_p1;
-            document.getElementById("displayScoreP2").innerText = data.score_p2;
-            document.getElementById("displayStatus").innerText = data.status;
-            
-            console.log("Scoreboard updated with live data!");
+            document.getElementById("team1Name").innerText = data.player1;
+            document.getElementById("team2Name").innerText = data.player2;
+            document.getElementById("team1Score").innerText = data.score_p1;
+            document.getElementById("team2Score").innerText = data.score_p2;
+            document.getElementById("gamePhase").innerText = "Status: " + data.status;
+            console.log("Scoreboard synced with Firebase.");
           } else {
-            console.log("No match data found.");
+            document.getElementById("gamePhase").innerText = "Awaiting match data...";
           }
         });
-
-        // 2. THE BUTTON (Still works to reset the score)
-        document.getElementById("startMatchBtn").addEventListener("click", async () => {
-          try {
-            await setDoc(doc(db, "matches", "grand_finals"), {
-              player1: "LeeYawn",
-              player2: "Mica",
-              game: "The Witcher 3",
-              score_p1: 0,
-              score_p2: 0,
-              status: "in-progress"
-            });
-          } catch (error) {
-            alert("ERROR: " + error.message);
-          }
-        });
-      } catch (e) {
-        console.error("Critical Setup Error:", e);
+      } catch (error) {
+        console.error("Firebase connection error:", error);
       }
     </script>
 </body>
