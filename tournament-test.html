@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LVLUP Tournament Test</title>
+    <style>
+        body { font-family: sans-serif; padding: 40px; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Tournament Database Test</h1>
+    <p>Click the button below to send a live match to your database.</p>
+    
+    <button id="startMatchBtn">Send Match to Database</button>
+
+    <script type="module">
+      // 1. Web Imports (Instead of NPM imports)
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+      import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+      // 2. Your Exact Configuration Keys
+      const firebaseConfig = {
+        apiKey: "AIzaSyC7n0itej-hIh4M4pGQBs-QQrML-f-sNwM",
+        authDomain: "lvlupgames-backend.firebaseapp.com",
+        projectId: "lvlupgames-backend",
+        storageBucket: "lvlupgames-backend.firebasestorage.app",
+        messagingSenderId: "1033906369662",
+        appId: "1:1033906369662:web:847dc1d8d649340d74142f",
+        measurementId: "G-K7JJDFDD29"
+      };
+
+      // 3. Initialize Firebase and Firestore
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+
+      // 4. The Database Action
+      document.getElementById('startMatchBtn').addEventListener('click', async () => {
+        
+        // This pushes a document to a collection called "matches"
+        await setDoc(doc(db, "matches", "grand_finals"), {
+          player1: "LeeYawn",
+          player2: "Mica",
+          game: "The Witcher 3",
+          score_p1: 0,
+          score_p2: 0,
+          status: "in-progress"
+        });
+        
+        alert("Success! Check your Firebase Console > Firestore Database.");
+      });
+    </script>
+</body>
+</html>
