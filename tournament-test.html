@@ -1,26 +1,41 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>LVLUP Tournament Test</title>
+    <title>LVLUP Live Scoreboard</title>
     <style>
-        body { font-family: sans-serif; padding: 40px; }
-        button { padding: 10px 20px; font-size: 16px; cursor: pointer; font-weight: bold; }
+        body { font-family: sans-serif; padding: 40px; background-color: #f4f4f9; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 400px; margin-bottom: 20px; }
+        .score { font-size: 32px; font-weight: bold; color: #2c3e50; }
+        .players { font-size: 20px; margin-bottom: 10px; }
+        button { padding: 10px 20px; font-size: 14px; cursor: pointer; font-weight: bold; margin-top: 10px; }
     </style>
     
     <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
     <script>eruda.init();</script>
 </head>
 <body>
-    <h1>Tournament Database Test</h1>
-    <p>Tap the gear icon in the corner to open your console!</p>
+    <h1>Live Tournament Feed</h1>
     
-    <button id="startMatchBtn">Send Match to Database</button>
+    <div class="card" id="scoreboard">
+        <h3 id="displayGame" style="color: #e74c3c; margin-top: 0;">Loading Game...</h3>
+        <div class="players">
+            <span id="displayP1">Player 1</span> 
+            <b>VS</b> 
+            <span id="displayP2">Player 2</span>
+        </div>
+        <div class="score">
+            <span id="displayScoreP1">0</span> - <span id="displayScoreP2">0</span>
+        </div>
+        <p>Status: <span id="displayStatus" style="font-style: italic;">...</span></p>
+    </div>
+
+    <button id="startMatchBtn">Reset Match Data</button>
 
     <script type="module">
+      // Notice we added 'onSnapshot' to this import!
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-      import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+      import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-      // Hardcoded straight quotes to prevent tablet keyboard issues
       const firebaseConfig = {
         apiKey: "AIzaSyC7n0itej-hIh4M4pGQBs-QQrML-f-sNwM",
         authDomain: "lvlupgames-backend.firebaseapp.com",
@@ -33,11 +48,31 @@
       try {
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        console.log("Firebase is wired up and ready!");
+        
+        // 1. THE LISTENER (The Magic Part)
+        // We tell Firebase to watch the "grand_finals" document constantly
+        const matchRef = doc(db, "matches", "grand_finals");
+        
+        onSnapshot(matchRef, (snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.data();
+            
+            // Push the database data directly into the HTML elements
+            document.getElementById("displayGame").innerText = data.game;
+            document.getElementById("displayP1").innerText = data.player1;
+            document.getElementById("displayP2").innerText = data.player2;
+            document.getElementById("displayScoreP1").innerText = data.score_p1;
+            document.getElementById("displayScoreP2").innerText = data.score_p2;
+            document.getElementById("displayStatus").innerText = data.status;
+            
+            console.log("Scoreboard updated with live data!");
+          } else {
+            console.log("No match data found.");
+          }
+        });
 
+        // 2. THE BUTTON (Still works to reset the score)
         document.getElementById("startMatchBtn").addEventListener("click", async () => {
-          console.log("Button tapped! Sending data to Firestore...");
-          
           try {
             await setDoc(doc(db, "matches", "grand_finals"), {
               player1: "LeeYawn",
@@ -47,11 +82,8 @@
               score_p2: 0,
               status: "in-progress"
             });
-            alert("SUCCESS! Check the Firebase Console!");
-            console.log("Data successfully written to database.");
           } catch (error) {
-            alert("DATABASE REJECTED IT: " + error.message);
-            console.error("Firebase Error:", error);
+            alert("ERROR: " + error.message);
           }
         });
       } catch (e) {
