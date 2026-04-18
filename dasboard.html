@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LVLUP | Captain Dashboard</title>
+    <style>
+        :root { 
+            --lvlup-bg: #0a0f16; --lvlup-panel: #131c28; 
+            --lvlup-accent: #00ffcc; --lvlup-text: #f8fafc; 
+            --lvlup-text-muted: #64748b; --lvlup-nav: #05080c;
+        }
+
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--lvlup-bg); color: var(--lvlup-text); margin: 0; }
+        
+        nav { background: var(--lvlup-nav); padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--lvlup-accent); }
+        .logo { font-size: 24px; font-weight: bold; color: var(--lvlup-accent); letter-spacing: 2px; }
+        
+        .logout-btn { background: transparent; color: var(--lvlup-text-muted); border: 1px solid var(--lvlup-text-muted); padding: 8px 16px; border-radius: 4px; cursor: pointer; transition: 0.3s; }
+        .logout-btn:hover { background: rgba(255,255,255,0.1); color: white; }
+
+        .container { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
+        
+        .welcome-panel { background: var(--lvlup-panel); padding: 40px; border-radius: 12px; border-left: 4px solid var(--lvlup-accent); margin-bottom: 30px; }
+        .welcome-panel h1 { margin-top: 0; }
+        .user-email { color: var(--lvlup-accent); font-weight: bold; }
+
+        .action-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        
+        .action-card { background: var(--lvlup-panel); padding: 30px; border-radius: 12px; text-align: center; border: 1px solid #1e293b; transition: 0.3s; }
+        .action-card:hover { border-color: var(--lvlup-accent); transform: translateY(-5px); }
+        .action-card h3 { margin-top: 0; font-size: 22px; }
+        .action-card p { color: var(--lvlup-text-muted); margin-bottom: 20px; }
+        
+        .btn-primary { background: var(--lvlup-accent); color: #000; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; display: inline-block; }
+        .btn-secondary { background: #1e293b; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; display: inline-block; }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="logo">LVLUP TOURNAMENTS</div>
+        <button id="signOutBtn" class="logout-btn">Sign Out</button>
+    </nav>
+
+    <div class="container" style="display: none;" id="dashboardContent">
+        <div class="welcome-panel">
+            <h1>Welcome to the Command Center</h1>
+            <p>Logged in as: <span id="displayEmail" class="user-email">Loading...</span></p>
+            <p style="color: var(--lvlup-text-muted); max-width: 600px;">This is your private dashboard. From here, you can manage your MLBB rosters, track your tournament standing, and access the private match lobbies.</p>
+        </div>
+
+        <div class="action-grid">
+            <div class="action-card">
+                <h3>Enroll a Squad</h3>
+                <p>Register a new team for upcoming LVLUP competitive circuits.</p>
+                <a href="register.html" class="btn-primary">Register Team</a>
+            </div>
+
+            <div class="action-card">
+                <h3>My Active Teams</h3>
+                <p>View the current status, wins, and losses of your registered rosters.</p>
+                <a href="#" class="btn-secondary" onclick="alert('Team Management module coming soon!')">Manage Teams</a>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { auth } from './firebase-setup.js';
+        import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+
+        // 1. The Security Check
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is signed in, reveal the dashboard and show their email
+                document.getElementById('dashboardContent').style.display = "block";
+                document.getElementById('displayEmail').innerText = user.email;
+            } else {
+                // Kick unauthorized users back to the login screen
+                window.location.href = "login.html";
+            }
+        });
+
+        // 2. The Logout Logic
+        document.getElementById('signOutBtn').addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+                // onAuthStateChanged will instantly detect the logout and redirect them
+            } catch (error) {
+                console.error("Error signing out: ", error);
+            }
+        });
+    </script>
+</body>
+</html>
