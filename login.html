@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LVLUP | Captain Login</title>
+    <style>
+        :root { 
+            --lvlup-bg: #0a0f16; --lvlup-panel: #131c28; 
+            --lvlup-accent: #00ffcc; --lvlup-text: #f8fafc; 
+            --lvlup-text-muted: #64748b; 
+        }
+
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--lvlup-bg); color: var(--lvlup-text); margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        
+        .auth-card { background: var(--lvlup-panel); padding: 40px; border-radius: 12px; width: 100%; max-width: 400px; border-top: 4px solid var(--lvlup-accent); box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        .auth-card h2 { margin-top: 0; text-align: center; font-size: 28px; }
+        
+        .input-group { margin-bottom: 20px; }
+        .input-group label { display: block; margin-bottom: 8px; color: var(--lvlup-text-muted); font-size: 14px; }
+        .input-group input { width: 100%; padding: 12px; background: #0f172a; border: 1px solid #1e293b; color: white; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
+        .input-group input:focus { outline: none; border-color: var(--lvlup-accent); }
+        
+        .btn { width: 100%; padding: 14px; background: var(--lvlup-accent); color: #000; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
+        .btn-outline { background: transparent; border: 1px solid var(--lvlup-accent); color: var(--lvlup-accent); }
+        
+        .error-msg { color: #ef4444; font-size: 14px; text-align: center; min-height: 20px; margin-bottom: 10px; }
+        .back-link { display: block; text-align: center; color: var(--lvlup-text-muted); text-decoration: none; margin-top: 20px; font-size: 14px; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+    <script>eruda.init();</script>
+</head>
+<body>
+
+    <div class="auth-card">
+        <h2>Captain Portal</h2>
+        <div id="errorText" class="error-msg"></div>
+        
+        <div class="input-group">
+            <label>Email Address</label>
+            <input type="email" id="emailInput" placeholder="captain@squad.com">
+        </div>
+        
+        <div class="input-group">
+            <label>Password</label>
+            <input type="password" id="passwordInput" placeholder="••••••••">
+        </div>
+
+        <button id="loginBtn" class="btn">Sign In</button>
+        <button id="signupBtn" class="btn btn-outline">Create Account</button>
+        
+        <a href="index.html" class="back-link">← Back to Main Menu</a>
+    </div>
+
+    <script type="module">
+        // Import Auth from your central setup file
+        import { auth } from './firebase-setup.js';
+        import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+
+        const emailIn = document.getElementById('emailInput');
+        const passIn = document.getElementById('passwordInput');
+        const errorText = document.getElementById('errorText');
+
+        // Login Logic
+        document.getElementById('loginBtn').addEventListener('click', async () => {
+            try {
+                await signInWithEmailAndPassword(auth, emailIn.value, passIn.value);
+                window.location.href = "register.html"; // Redirect to team registration
+            } catch (error) {
+                errorText.innerText = error.message.replace("Firebase: ", "");
+            }
+        });
+
+        // Signup Logic
+        document.getElementById('signupBtn').addEventListener('click', async () => {
+            try {
+                await createUserWithEmailAndPassword(auth, emailIn.value, passIn.value);
+                alert("Account created! You can now register your team.");
+                window.location.href = "register.html";
+            } catch (error) {
+                errorText.innerText = error.message.replace("Firebase: ", "");
+            }
+        });
+    </script>
+</body>
+</html>
