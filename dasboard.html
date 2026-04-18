@@ -21,9 +21,10 @@
 
         .container { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
         
-        .welcome-panel { background: var(--lvlup-panel); padding: 40px; border-radius: 12px; border-left: 4px solid var(--lvlup-accent); margin-bottom: 30px; }
-        .welcome-panel h1 { margin-top: 0; }
-        .user-email { color: var(--lvlup-accent); font-weight: bold; }
+        .profile-card { background: var(--lvlup-panel); padding: 30px; border-radius: 12px; border-left: 4px solid var(--lvlup-accent); margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
+        .profile-info h1 { margin: 0 0 10px 0; font-size: 32px; }
+        .profile-info p { margin: 5px 0; color: var(--lvlup-text-muted); }
+        .role-badge { background: #1e293b; color: var(--lvlup-accent); padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; text-transform: uppercase; border: 1px solid var(--lvlup-accent); }
 
         .action-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
         
@@ -44,10 +45,14 @@
     </nav>
 
     <div class="container" style="display: none;" id="dashboardContent">
-        <div class="welcome-panel">
-            <h1>Welcome to the Command Center</h1>
-            <p>Logged in as: <span id="displayEmail" class="user-email">Loading...</span></p>
-            <p style="color: var(--lvlup-text-muted); max-width: 600px;">This is your private dashboard. From here, you can manage your MLBB rosters, track your tournament standing, and access the private match lobbies.</p>
+        <div class="profile-card">
+            <div class="profile-info">
+                <h1 id="displayName">Loading Name...</h1>
+                <p>Email: <span id="displayEmail" style="color: white;">...</span></p>
+            </div>
+            <div>
+                <span id="displayRole" class="role-badge">Loading...</span>
+            </div>
         </div>
 
         <div class="action-grid">
@@ -66,29 +71,36 @@
     </div>
 
     <script type="module">
-        import { auth } from './firebase-setup.js';
+        import { db, auth } from './firebase-setup.js';
         import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-        // 1. The Security Check
-        onAuthStateChanged(auth, (user) => {
+        onAuthStateChanged(auth, async (user) => {
             if (user) {
-                // User is signed in, reveal the dashboard and show their email
                 document.getElementById('dashboardContent').style.display = "block";
-                document.getElementById('displayEmail').innerText = user.email;
+                
+                try {
+                    // Fetch the user's profile from Firestore
+                    const userProfile = await getDoc(doc(db, "users", user.uid));
+                    if (userProfile.exists()) {
+                        const data = userProfile.data();
+                        document.getElementById('displayName').innerText = data.name;
+                        document.getElementById('displayEmail').innerText = data.email;
+                        document.getElementById('displayRole').innerText = data.role;
+                    } else {
+                        document.getElementById('displayName').innerText = "Profile Setup Pending";
+                        document.getElementById('displayEmail').innerText = user.email;
+                    }
+                } catch (err) {
+                    console.error("Error fetching profile:", err);
+                }
             } else {
-                // Kick unauthorized users back to the login screen
                 window.location.href = "login.html";
             }
         });
 
-        // 2. The Logout Logic
         document.getElementById('signOutBtn').addEventListener('click', async () => {
-            try {
-                await signOut(auth);
-                // onAuthStateChanged will instantly detect the logout and redirect them
-            } catch (error) {
-                console.error("Error signing out: ", error);
-            }
+            await signOut(auth);
         });
     </script>
 </body>
