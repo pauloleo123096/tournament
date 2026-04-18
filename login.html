@@ -27,8 +27,6 @@
         .error-msg { color: #ef4444; font-size: 14px; text-align: center; min-height: 20px; margin-bottom: 10px; }
         .back-link { display: block; text-align: center; color: var(--lvlup-text-muted); text-decoration: none; margin-top: 20px; font-size: 14px; }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-    <script>eruda.init();</script>
 </head>
 <body>
 
@@ -53,9 +51,15 @@
     </div>
 
     <script type="module">
-        // Import Auth from your central setup file
         import { auth } from './firebase-setup.js';
-        import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+
+        // Auto-forward if already logged in
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                window.location.href = "dashboard.html";
+            }
+        });
 
         const emailIn = document.getElementById('emailInput');
         const passIn = document.getElementById('passwordInput');
@@ -65,7 +69,7 @@
         document.getElementById('loginBtn').addEventListener('click', async () => {
             try {
                 await signInWithEmailAndPassword(auth, emailIn.value, passIn.value);
-                window.location.href = "register.html"; // Redirect to team registration
+                // The onAuthStateChanged listener will handle the redirect instantly
             } catch (error) {
                 errorText.innerText = error.message.replace("Firebase: ", "");
             }
@@ -75,8 +79,7 @@
         document.getElementById('signupBtn').addEventListener('click', async () => {
             try {
                 await createUserWithEmailAndPassword(auth, emailIn.value, passIn.value);
-                alert("Account created! You can now register your team.");
-                window.location.href = "register.html";
+                // The onAuthStateChanged listener will handle the redirect instantly
             } catch (error) {
                 errorText.innerText = error.message.replace("Firebase: ", "");
             }
