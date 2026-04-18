@@ -35,6 +35,11 @@
         <div id="errorText" class="error-msg"></div>
         
         <div class="input-group">
+            <label>Captain Name (Required for Signup)</label>
+            <input type="text" id="nameInput" placeholder="e.g. LeeYawn">
+        </div>
+
+        <div class="input-group">
             <label>Email Address</label>
             <input type="email" id="emailInput" placeholder="captain@squad.com">
         </div>
@@ -51,37 +56,62 @@
     </div>
 
     <script type="module">
-        import { auth } from './firebase-setup.js';
+        import { db, auth } from './firebase-setup.js';
         import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-        // Auto-forward if already logged in
         onAuthStateChanged(auth, (user) => {
-            if (user) {
-                window.location.href = "dashboard.html";
-            }
+            if (user) window.location.href = "dashboard.html";
         });
 
+        const nameIn = document.getElementById('nameInput');
         const emailIn = document.getElementById('emailInput');
         const passIn = document.getElementById('passwordInput');
         const errorText = document.getElementById('errorText');
 
-        // Login Logic
+        // --- LOGIN LOGIC ---
         document.getElementById('loginBtn').addEventListener('click', async () => {
+            errorText.innerText = "";
+            if (!emailIn.value || !passIn.value) {
+                errorText.innerText = "Error: Please enter email and password.";
+                return;
+            }
             try {
                 await signInWithEmailAndPassword(auth, emailIn.value, passIn.value);
-                // The onAuthStateChanged listener will handle the redirect instantly
             } catch (error) {
-                errorText.innerText = error.message.replace("Firebase: ", "");
+                if (error.code === 'auth/invalid-credential') errorText.innerText = "Error: Invalid email or password.";
+                else errorText.innerText = "Login Failed: " + error.message;
             }
         });
 
-        // Signup Logic
+        // --- SIGNUP & PROFILE CREATION LOGIC ---
         document.getElementById('signupBtn').addEventListener('click', async () => {
+            errorText.innerText = "";
+            if (!nameIn.value || !emailIn.value || !passIn.value) {
+                errorText.innerText = "Error: Name, Email, and Password are all required to create an account.";
+                return;
+            }
+            if (passIn.value.length < 6) {
+                errorText.innerText = "Error: Password must be at least 6 characters.";
+                return;
+            }
+
             try {
-                await createUserWithEmailAndPassword(auth, emailIn.value, passIn.value);
-                // The onAuthStateChanged listener will handle the redirect instantly
+                // 1. Create the secure Auth account
+                const userCredential = await createUserWithEmailAndPassword(auth, emailIn.value, passIn.value);
+                const user = userCredential.user;
+
+                // 2. Write the public profile data to Firestore
+                await setDoc(doc(db, "users", user.uid), {
+                    name: nameIn.value,
+                    email: user.email,
+                    role: "captain",
+                    createdAt: new Date().toISOString()
+                });
+                // The onAuthStateChanged listener handles the redirect
             } catch (error) {
-                errorText.innerText = error.message.replace("Firebase: ", "");
+                if (error.code === 'auth/email-already-in-use') errorText.innerText = "Error: Email already in use.";
+                else errorText.innerText = "Signup Failed: " + error.message;
             }
         });
     </script>
