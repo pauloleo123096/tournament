@@ -13,7 +13,7 @@
 
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--lvlup-bg); color: var(--lvlup-text); margin: 0; padding: 40px 20px; }
         
-        .form-container { max-width: 600px; margin: 0 auto; background: var(--lvlup-panel); padding: 40px; border-radius: 12px; border-top: 4px solid var(--lvlup-accent); box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        .form-container { max-width: 600px; margin: 0 auto; background: var(--lvlup-panel); padding: 40px; border-radius: 12px; border-top: 4px solid var(--lvlup-accent); box-shadow: 0 10px 25px rgba(0,0,0,0.5); display: none; }
         .form-container h2 { margin-top: 0; font-size: 32px; margin-bottom: 5px; }
         .subtitle { color: var(--lvlup-text-muted); margin-bottom: 30px; font-size: 16px; }
         
@@ -22,18 +22,14 @@
         .input-group input { width: 100%; padding: 12px; background: #0f172a; border: 1px solid #1e293b; color: white; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
         .input-group input:focus { outline: none; border-color: var(--lvlup-accent); }
         
-        /* Two column layout for players */
         .roster-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         
         .submit-btn { width: 100%; padding: 16px; background: var(--lvlup-accent); color: #000; border: none; border-radius: 6px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 20px; transition: 0.2s; }
-        .submit-btn:active { transform: scale(0.98); }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-    <script>eruda.init();</script>
 </head>
 <body>
 
-    <div class="form-container">
+    <div class="form-container" id="registrationForm">
         <h2>Enroll Squad</h2>
         <div class="subtitle">Enter your official MLBB roster details below.</div>
 
@@ -56,27 +52,38 @@
         </div>
 
         <button id="submitTeamBtn" class="submit-btn">Submit Registration</button>
-        <a href="index.html" style="display: block; text-align: center; color: var(--lvlup-text-muted); text-decoration: none; margin-top: 20px; font-size: 14px;">Cancel & Return Home</a>
+        <a href="dashboard.html" style="display: block; text-align: center; color: var(--lvlup-text-muted); text-decoration: none; margin-top: 20px; font-size: 14px;">Cancel & Return to Dashboard</a>
     </div>
 
     <script type="module">
         import { db, auth } from './firebase-setup.js';
         import { collection, addDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+
+        let currentUserId = null;
+
+        // Ensure only logged-in users see the form
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUserId = user.uid;
+                document.getElementById('registrationForm').style.display = "block";
+            } else {
+                window.location.href = "login.html";
+            }
+        });
 
         document.getElementById('submitTeamBtn').addEventListener('click', async () => {
-            // Grab the data from the inputs
             const tName = document.getElementById('teamName').value;
             const capIGN = document.getElementById('captainIGN').value;
             
-            // Basic validation
             if (!tName || !capIGN) {
                 alert("Team Name and Captain IGN are required!");
                 return;
             }
 
             try {
-                // Push data to the 'teams' collection
                 await addDoc(collection(db, "teams"), {
+                    ownerUid: currentUserId, // Binds the team to the user's account
                     teamName: tName,
                     captain: capIGN,
                     roster: [
@@ -87,11 +94,12 @@
                     ],
                     wins: 0,
                     losses: 0,
-                    status: "registered"
+                    status: "registered",
+                    createdAt: new Date().toISOString()
                 });
 
-                alert("Squad successfully registered! Check your Firebase Console.");
-                window.location.href = "index.html"; // Send them back to the hub
+                alert("Squad successfully registered!");
+                window.location.href = "dashboard.html"; 
                 
             } catch (error) {
                 alert("DATABASE ERROR: " + error.message);
