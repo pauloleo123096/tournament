@@ -13,6 +13,7 @@
 
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--lvlup-bg); color: var(--lvlup-text); margin: 0; }
         
+        /* Navigation Bar */
         nav { background: var(--lvlup-nav); padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--lvlup-accent); }
         .logo { font-size: 24px; font-weight: bold; color: var(--lvlup-accent); letter-spacing: 2px; }
         .nav-links a { color: var(--lvlup-text); text-decoration: none; margin-left: 20px; font-weight: bold; transition: color 0.3s; }
@@ -21,12 +22,16 @@
 
         .container { max-width: 1200px; margin: 40px auto; padding: 0 20px; }
 
+        /* Hero Section */
         .hero { background: var(--lvlup-panel); padding: 60px 40px; border-radius: 12px; text-align: center; margin-bottom: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .hero h1 { font-size: 48px; margin: 0 0 20px 0; }
         .hero h1 span { color: var(--lvlup-accent); }
         .hero p { font-size: 18px; color: var(--lvlup-text-muted); max-width: 600px; margin: 0 auto 30px auto; }
+        
+        /* Hero Button */
         .hero button { background: var(--lvlup-accent); color: #000; border: none; padding: 15px 30px; font-size: 18px; font-weight: bold; border-radius: 6px; cursor: pointer; }
 
+        /* Tournaments Grid */
         .section-title { font-size: 28px; margin-bottom: 20px; border-left: 4px solid var(--lvlup-accent); padding-left: 15px; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
         .card { background: var(--lvlup-panel); padding: 20px; border-radius: 8px; border: 1px solid #1e293b; }
@@ -66,6 +71,7 @@
         import { db } from './firebase-setup.js';
         import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
+        // Pull the live match data
         const matchRef = doc(db, "matches", "grand_finals");
         onSnapshot(matchRef, (snapshot) => {
             if (snapshot.exists()) {
