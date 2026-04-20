@@ -125,8 +125,10 @@
             snapshot.forEach((doc) => {
                 const event = doc.data();
                 
+                // NEW: Skip this card entirely if the admin clicked "Hide"
+                if (event.isHidden === true) return; 
+
                 let badgeClass = "badge-upcoming";
-                let statusText = "Upcoming";
                 
                 if (event.status === "live") {
                     badgeClass = "badge-live";
