@@ -88,7 +88,7 @@
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { doc, collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-        // --- BUG FIX 1: Auth State Listener for the Navbar ---
+        // Auth State Listener for the Navbar
         onAuthStateChanged(auth, (user) => {
             const portalLink = document.getElementById('portalLink');
             if (user) {
@@ -125,10 +125,12 @@
             snapshot.forEach((doc) => {
                 const event = doc.data();
                 
-                // NEW: Skip this card entirely if the admin clicked "Hide"
+                // Skip this card entirely if the admin clicked "Hide"
                 if (event.isHidden === true) return; 
 
+                // Declarations moved here to fix the bug
                 let badgeClass = "badge-upcoming";
+                let statusText = "Upcoming";
                 
                 if (event.status === "live") {
                     badgeClass = "badge-live";
@@ -138,7 +140,6 @@
                     statusText = "Completed";
                 }
 
-                // --- BUG FIX 2: Link points to tournament.html with ID ---
                 const card = `
                     <div class="card">
                         <span class="status-badge ${badgeClass}">${statusText}</span>
