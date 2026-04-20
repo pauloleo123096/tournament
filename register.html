@@ -15,8 +15,13 @@
         
         .form-container { max-width: 600px; margin: 0 auto; background: var(--lvlup-panel); padding: 40px; border-radius: 12px; border-top: 4px solid var(--lvlup-accent); box-shadow: 0 10px 25px rgba(0,0,0,0.5); display: none; }
         .form-container h2 { margin-top: 0; font-size: 32px; margin-bottom: 5px; }
-        .subtitle { color: var(--lvlup-text-muted); margin-bottom: 30px; font-size: 16px; }
+        .subtitle { color: var(--lvlup-text-muted); margin-bottom: 20px; font-size: 16px; }
         
+        /* New Target Banner Styling */
+        .target-banner { background: #0f172a; border-left: 4px solid var(--lvlup-accent); padding: 12px 15px; border-radius: 4px; margin-bottom: 30px; }
+        .target-banner span { color: var(--lvlup-text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 3px; }
+        .target-banner strong { font-size: 18px; color: var(--lvlup-text); }
+
         .input-group { margin-bottom: 20px; }
         .input-group label { display: block; margin-bottom: 8px; color: #cbd5e1; font-weight: bold; }
         .input-group input { width: 100%; padding: 12px; background: #0f172a; border: 1px solid #1e293b; color: white; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
@@ -25,6 +30,7 @@
         .roster-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         
         .submit-btn { width: 100%; padding: 16px; background: var(--lvlup-accent); color: #000; border: none; border-radius: 6px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 20px; transition: 0.2s; }
+        .submit-btn:hover { background: #00ccaa; }
     </style>
 </head>
 <body>
@@ -32,6 +38,11 @@
     <div class="form-container" id="registrationForm">
         <h2>Enroll Squad</h2>
         <div class="subtitle">Enter your official MLBB roster details below.</div>
+
+        <div class="target-banner" id="targetBanner">
+            <span>Registering For:</span>
+            <strong id="targetEventName">Loading Event Data...</strong>
+        </div>
 
         <div class="input-group">
             <label>Team Name</label>
@@ -57,18 +68,47 @@
 
     <script type="module">
         import { db, auth } from './firebase-setup.js';
-        import { collection, addDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        // NEW: Imported doc and getDoc to fetch tournament info
+        import { collection, addDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
         let currentUserId = null;
+        let targetTourneyId = "general";
+        let targetTourneyName = "General Open Roster";
+
+        // URL Parser: Check if an ID was passed in the link
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlId = urlParams.get('id');
+
+        // Fetch Tournament Data if an ID exists
+        async function fetchTargetTournament() {
+            if (urlId) {
+                targetTourneyId = urlId;
+                try {
+                    const tSnap = await getDoc(doc(db, "tournaments", urlId));
+                    if (tSnap.exists()) {
+                        targetTourneyName = tSnap.data().title;
+                    } else {
+                        targetTourneyName = "Unknown Event (ID not found)";
+                    }
+                } catch (e) {
+                    console.error("Error fetching tournament:", e);
+                    targetTourneyName = "Error loading event data";
+                }
+            }
+            document.getElementById('targetEventName').innerText = targetTourneyName;
+        }
 
         // Ensure only logged-in users see the form
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 currentUserId = user.uid;
                 document.getElementById('registrationForm').style.display = "block";
+                fetchTargetTournament(); // Load the banner text
             } else {
-                window.location.href = "login.html";
+                // If they are not logged in, pass the target ID to the login page so it isn't lost!
+                const redirectParams = urlId ? `?id=${urlId}` : '';
+                window.location.href = `login.html${redirectParams}`;
             }
         });
 
@@ -81,9 +121,16 @@
                 return;
             }
 
+            // Button Loading State
+            const btn = document.getElementById('submitTeamBtn');
+            btn.innerText = "Encrypting Data...";
+            btn.disabled = true;
+
             try {
                 await addDoc(collection(db, "teams"), {
-                    ownerUid: currentUserId, // Binds the team to the user's account
+                    ownerUid: currentUserId, 
+                    tournamentId: targetTourneyId,     // NEW: Binds to the specific event
+                    tournamentName: targetTourneyName, // NEW: Saves the name for easy dashboard viewing
                     teamName: tName,
                     captain: capIGN,
                     roster: [
@@ -94,7 +141,7 @@
                     ],
                     wins: 0,
                     losses: 0,
-                    status: "registered",
+                    status: "Pending Review", // Updated to reflect a realistic tournament flow
                     createdAt: new Date().toISOString()
                 });
 
@@ -104,6 +151,8 @@
             } catch (error) {
                 alert("DATABASE ERROR: " + error.message);
                 console.error(error);
+                btn.innerText = "Submit Registration";
+                btn.disabled = false;
             }
         });
     </script>
