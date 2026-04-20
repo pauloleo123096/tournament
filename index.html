@@ -86,7 +86,7 @@
     <script type="module">
         import { db, auth } from './firebase-setup.js';
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { doc, collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         // Date Formatter Helper
         function formatDate(dateString) {
@@ -106,13 +106,21 @@
             }
         });
 
-        // 1. Featured Match Listener
-        const matchRef = doc(db, "matches", "grand_finals");
-        onSnapshot(matchRef, (snapshot) => {
-            if (snapshot.exists()) {
-                const data = snapshot.data();
-                document.getElementById("liveTeamA").innerText = data.player1 || "TBD";
-                document.getElementById("liveTeamB").innerText = data.player2 || "TBD";
+        // 1. Featured Match Listener (Pulls newest active stream)
+        const liveQuery = query(collection(db, "streams"), orderBy("createdAt", "desc"));
+        onSnapshot(liveQuery, (snapshot) => {
+            let foundLive = false;
+            snapshot.forEach((docSnap) => {
+                if (!foundLive && docSnap.data().isHidden !== true) {
+                    const data = docSnap.data();
+                    document.getElementById("liveTeamA").innerText = data.teamA || "TBD";
+                    document.getElementById("liveTeamB").innerText = data.teamB || "TBD";
+                    foundLive = true; // Stop after finding the most recent visible one
+                }
+            });
+            if (!foundLive) {
+                document.getElementById("liveTeamA").innerText = "OFFLINE";
+                document.getElementById("liveTeamB").innerText = "OFFLINE";
             }
         });
 
@@ -145,7 +153,6 @@
                     statusText = "Completed";
                 }
 
-                // Added formatDate(event.date) here
                 const card = `
                     <div class="card">
                         <span class="status-badge ${badgeClass}">${statusText}</span>
