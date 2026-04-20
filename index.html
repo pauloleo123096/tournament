@@ -29,14 +29,21 @@
         .hero p { font-size: 18px; color: var(--lvlup-text-muted); max-width: 600px; margin: 0 auto 30px auto; }
         
         /* Hero Button */
-        .hero button { background: var(--lvlup-accent); color: #000; border: none; padding: 15px 30px; font-size: 18px; font-weight: bold; border-radius: 6px; cursor: pointer; }
+        .hero button { background: var(--lvlup-accent); color: #000; border: none; padding: 15px 30px; font-size: 18px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+        .hero button:hover { background: #00ccaa; transform: translateY(-2px); }
 
         /* Tournaments Grid */
-        .section-title { font-size: 28px; margin-bottom: 20px; border-left: 4px solid var(--lvlup-accent); padding-left: 15px; }
+        .section-title { font-size: 28px; margin-bottom: 20px; border-left: 4px solid var(--lvlup-accent); padding-left: 15px; margin-top: 40px; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-        .card { background: var(--lvlup-panel); padding: 20px; border-radius: 8px; border: 1px solid #1e293b; }
-        .card h3 { margin-top: 0; }
-        .status-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; background: #ef4444; color: white; margin-bottom: 10px; }
+        .card { background: var(--lvlup-panel); padding: 25px; border-radius: 8px; border: 1px solid #1e293b; transition: transform 0.2s; }
+        .card:hover { transform: translateY(-5px); border-color: var(--lvlup-accent); }
+        .card h3 { margin-top: 0; font-size: 22px; }
+        
+        /* Dynamic Badges */
+        .status-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-bottom: 15px; text-transform: uppercase; }
+        .badge-live { background: #ef4444; color: white; }
+        .badge-upcoming { background: transparent; color: var(--lvlup-accent); border: 1px solid var(--lvlup-accent); }
+        .badge-completed { background: transparent; color: var(--lvlup-text-muted); border: 1px solid var(--lvlup-text-muted); }
     </style>
 </head>
 <body>
@@ -44,7 +51,7 @@
     <nav>
         <div class="logo">LVLUP TOURNAMENTS</div>
         <div class="nav-links">
-            <a href="login.html">Login</a>
+            <a href="login.html">Captain's Portal</a>
             <a href="register.html" class="btn-register">Register Team</a>
         </div>
     </nav>
@@ -56,29 +63,79 @@
             <button onclick="window.location.href='register.html'">Enroll Your Squad Now</button>
         </div>
 
-        <h2 class="section-title">Active Events</h2>
-        <div class="grid" id="tournamentGrid">
-            <div class="card">
-                <span class="status-badge">LIVE</span>
+        <h2 class="section-title">Featured Live Match</h2>
+        <div class="grid">
+            <div class="card" style="border-color: #ef4444;">
+                <span class="status-badge badge-live">🔴 LIVE NOW</span>
                 <h3>Grand Finals Invitational</h3>
-                <p style="color: var(--lvlup-text-muted);">Match-UP: <span id="liveTeamA" style="color:#fff;">Loading...</span> vs <span id="liveTeamB" style="color:#fff;">Loading...</span></p>
-                <a href="hub.html" style="color: var(--lvlup-accent); text-decoration: none;">Watch Live Stream →</a>
+                <p style="color: var(--lvlup-text-muted); font-size: 18px;">
+                    <strong id="liveTeamA" style="color:#fff;">Loading...</strong> 
+                    <span style="color: var(--lvlup-accent); margin: 0 10px;">VS</span> 
+                    <strong id="liveTeamB" style="color:#fff;">Loading...</strong>
+                </p>
+                <a href="hub.html" style="color: var(--lvlup-accent); text-decoration: none; font-weight: bold; margin-top: 10px; display: inline-block;">Watch Live Stream →</a>
             </div>
+        </div>
+
+        <h2 class="section-title">Tournament Circuit</h2>
+        <div class="grid" id="dynamicTournamentGrid">
+            <p style="color: var(--lvlup-text-muted);">Decrypting network data... scanning for events...</p>
         </div>
     </div>
 
     <script type="module">
         import { db } from './firebase-setup.js';
-        import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { doc, collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-        // Pull the live match data
+        // 1. Your Original Match Listener (Kept intact!)
         const matchRef = doc(db, "matches", "grand_finals");
         onSnapshot(matchRef, (snapshot) => {
             if (snapshot.exists()) {
                 const data = snapshot.data();
-                document.getElementById("liveTeamA").innerText = data.player1;
-                document.getElementById("liveTeamB").innerText = data.player2;
+                document.getElementById("liveTeamA").innerText = data.player1 || "TBD";
+                document.getElementById("liveTeamB").innerText = data.player2 || "TBD";
             }
+        });
+
+        // 2. The New Dynamic Tournament Listener
+        const tGrid = document.getElementById('dynamicTournamentGrid');
+        const tourneyQuery = query(collection(db, "tournaments"), orderBy("createdAt", "desc"));
+        
+        onSnapshot(tourneyQuery, (snapshot) => {
+            tGrid.innerHTML = ""; // Clear loading text
+            
+            if (snapshot.empty) {
+                tGrid.innerHTML = '<p style="color: var(--lvlup-text-muted);">No active tournaments at the moment. Gather your squad and check back soon!</p>';
+                return;
+            }
+
+            snapshot.forEach((doc) => {
+                const event = doc.data();
+                
+                // Set styling based on status
+                let badgeClass = "badge-upcoming";
+                let statusText = "Upcoming";
+                
+                if (event.status === "live") {
+                    badgeClass = "badge-live";
+                    statusText = "🔴 LIVE";
+                } else if (event.status === "completed") {
+                    badgeClass = "badge-completed";
+                    statusText = "Completed";
+                }
+
+                // Inject the HTML card using your exact CSS classes
+                const card = `
+                    <div class="card">
+                        <span class="status-badge ${badgeClass}">${statusText}</span>
+                        <h3>${event.title}</h3>
+                        <p style="color: var(--lvlup-text-muted); margin: 5px 0;"><strong>Date:</strong> ${event.date}</p>
+                        <p style="color: var(--lvlup-accent); font-weight: bold; margin: 5px 0 20px 0;">🏆 Prize: ${event.prizePool}</p>
+                        <a href="register.html" style="color: var(--lvlup-text); text-decoration: underline;">View Details</a>
+                    </div>
+                `;
+                tGrid.innerHTML += card;
+            });
         });
     </script>
 </body>
