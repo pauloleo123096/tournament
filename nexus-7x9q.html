@@ -53,12 +53,11 @@
         <div class="grid-layout">
             <div>
                 <div class="panel" style="border-color: #ef4444;">
-                    <h2 style="margin-top: 0; color: #ef4444;">Live Broadcast Override</h2>
+                    <h2 style="margin-top: 0; color: #ef4444;">Deploy Broadcast</h2>
                     <input type="text" id="bcTeamA" placeholder="Team A Name">
                     <input type="text" id="bcTeamB" placeholder="Team B Name">
                     <input type="text" id="bcStreamLink" placeholder="YouTube Link (e.g. https://youtu.be/...)">
-                    
-                    <button class="btn-primary" style="background: #ef4444; color: white;" id="updateBroadcastBtn">Update Live Stream</button>
+                    <button class="btn-primary" style="background: #ef4444; color: white;" id="saveStreamBtn">Push to Network</button>
                     <div id="bcMessage" style="font-size: 14px; margin-top: 10px;"></div>
                 </div>
 
@@ -83,15 +82,20 @@
 
             <div>
                 <div class="panel">
+                    <h2 style="margin-top: 0; color: #ef4444;">Broadcast Management</h2>
+                    <table>
+                        <thead>
+                            <tr><th>Matchup</th><th>Visibility</th><th>Action</th></tr>
+                        </thead>
+                        <tbody id="streamTableBody"><tr><td colspan="3">Loading...</td></tr></tbody>
+                    </table>
+                </div>
+
+                <div class="panel">
                     <h2>Event Management</h2>
                     <table>
                         <thead>
-                            <tr>
-                                <th>Tournament</th>
-                                <th>Status</th>
-                                <th>Visibility</th>
-                                <th>Action</th>
-                            </tr>
+                            <tr><th>Tournament</th><th>Status</th><th>Visibility</th><th>Action</th></tr>
                         </thead>
                         <tbody id="tourneyTableBody"><tr><td colspan="4">Loading...</td></tr></tbody>
                     </table>
@@ -113,7 +117,7 @@
     <script type="module">
         import { db, auth } from './firebase-setup.js';
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { doc, getDoc, collection, getDocs, deleteDoc, addDoc, updateDoc, setDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { doc, getDoc, collection, getDocs, deleteDoc, addDoc, updateDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         let isEditMode = false;
 
@@ -124,6 +128,7 @@
                     document.getElementById('adminContent').style.display = "block";
                     loadUsers();
                     loadTournaments();
+                    loadStreams(); // NEW
                 } else {
                     window.location.replace("index.html");
                 }
@@ -132,49 +137,57 @@
             }
         });
 
-        // Broadcast Override (UPDATED TO INCLUDE STREAM LINK)
-        document.getElementById('updateBroadcastBtn').addEventListener('click', async () => {
+        // --- NEW: STREAM CMS LOGIC ---
+        document.getElementById('saveStreamBtn').addEventListener('click', async () => {
             const tA = document.getElementById('bcTeamA').value;
             const tB = document.getElementById('bcTeamB').value;
-            const sLink = document.getElementById('bcStreamLink').value; // Get the link
+            const sLink = document.getElementById('bcStreamLink').value;
             const msg = document.getElementById('bcMessage');
             
+            if(!tA || !tB || !sLink) { msg.style.color="red"; msg.innerText="All fields required."; return; }
+            
             try {
-                // Merge pushes the data without deleting other fields
-                await setDoc(doc(db, "matches", "grand_finals"), { player1: tA, player2: tB, streamUrl: sLink }, { merge: true });
-                msg.style.color = "var(--lvlup-accent)"; msg.innerText = "Stream & Matchup Updated!";
-                
-                // Clear the form fields after successful push
-                document.getElementById('bcTeamA').value = '';
-                document.getElementById('bcTeamB').value = '';
-                document.getElementById('bcStreamLink').value = '';
-                
+                await addDoc(collection(db, "streams"), { teamA: tA, teamB: tB, streamUrl: sLink, isHidden: false, createdAt: new Date().toISOString() });
+                msg.style.color = "var(--lvlup-accent)"; msg.innerText = "Stream Pushed to Network!";
+                document.getElementById('bcTeamA').value = ''; document.getElementById('bcTeamB').value = ''; document.getElementById('bcStreamLink').value = '';
                 setTimeout(() => msg.innerText = "", 3000);
-            } catch (e) { msg.style.color = "red"; msg.innerText = "Error updating stream."; }
+            } catch (e) { msg.style.color = "red"; msg.innerText = "Error: " + e.message; }
         });
 
-        // Tournament Form Logic
-        document.getElementById('saveTournamentBtn').addEventListener('click', async () => {
-            const id = document.getElementById('tId').value;
-            const title = document.getElementById('tTitle').value;
-            const date = document.getElementById('tDate').value;
-            const prize = document.getElementById('tPrize').value;
-            const status = document.getElementById('tStatus').value;
-            const desc = document.getElementById('tDesc').value;
-            const msg = document.getElementById('tMessage');
+        function loadStreams() {
+            onSnapshot(query(collection(db, "streams"), orderBy("createdAt", "desc")), (snapshot) => {
+                const tbody = document.getElementById('streamTableBody'); tbody.innerHTML = "";
+                snapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    tbody.innerHTML += `
+                        <tr>
+                            <td><strong>${data.teamA} vs ${data.teamB}</strong></td>
+                            <td>${data.isHidden ? "<span style='color:red;'>Hidden</span>" : "<span style='color:#00ffcc;'>Public</span>"}</td>
+                            <td>
+                                <button class="btn-secondary" onclick="toggleStreamVis('${docSnap.id}', ${data.isHidden})">${data.isHidden ? "Unhide" : "Hide"}</button>
+                                <button class="btn-danger" onclick="delStream('${docSnap.id}')">Purge</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            });
+        }
+        window.toggleStreamVis = async (id, isHidden) => await updateDoc(doc(db, "streams", id), { isHidden: !isHidden });
+        window.delStream = async (id) => { if(confirm("Permanently delete stream?")) await deleteDoc(doc(db, "streams", id)); }
 
+
+        // --- TOURNAMENT CMS LOGIC ---
+        document.getElementById('saveTournamentBtn').addEventListener('click', async () => {
+            const id = document.getElementById('tId').value; const title = document.getElementById('tTitle').value; const date = document.getElementById('tDate').value; const prize = document.getElementById('tPrize').value; const status = document.getElementById('tStatus').value; const desc = document.getElementById('tDesc').value; const msg = document.getElementById('tMessage');
             if (!title || !date) { msg.style.color = "red"; msg.innerText = "Title and Date required."; return; }
             msg.style.color = "var(--lvlup-accent)"; msg.innerText = "Processing...";
-
             try {
                 if (isEditMode) {
                     await updateDoc(doc(db, "tournaments", id), { title, date, prizePool: prize, status, description: desc });
-                    msg.innerText = "Event Updated!";
-                    exitEditMode();
+                    msg.innerText = "Event Updated!"; exitEditMode();
                 } else {
                     await addDoc(collection(db, "tournaments"), { title, date, prizePool: prize, status, description: desc, isHidden: false, createdAt: new Date().toISOString() });
-                    msg.innerText = "Event Deployed!";
-                    clearForm();
+                    msg.innerText = "Event Deployed!"; clearForm();
                 }
                 setTimeout(() => msg.innerText = "", 3000);
             } catch (e) { msg.style.color = "red"; msg.innerText = "Error: " + e.message; }
@@ -182,65 +195,40 @@
 
         function loadTournaments() {
             onSnapshot(query(collection(db, "tournaments"), orderBy("createdAt", "desc")), (snapshot) => {
-                const tbody = document.getElementById('tourneyTableBody');
-                tbody.innerHTML = "";
+                const tbody = document.getElementById('tourneyTableBody'); tbody.innerHTML = "";
                 snapshot.forEach((docSnap) => {
-                    const data = docSnap.data();
-                    const id = docSnap.id;
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td><strong>${data.title}</strong><br><span style="font-size: 11px;">${data.date}</span></td>
-                        <td>${data.status}</td>
-                        <td>${data.isHidden ? "<span style='color:red;'>Hidden</span>" : "<span style='color:#00ffcc;'>Public</span>"}</td>
-                        <td>
-                            <button class="btn-action" onclick="editEvent('${id}', '${data.title.replace(/'/g, "\\'")}', '${data.date}', '${data.prizePool || ''}', '${data.status}', '${(data.description || '').replace(/'/g, "\\'").replace(/\n/g, "\\n")}')">Edit</button>
-                            <button class="btn-secondary" onclick="toggleVis('${id}', ${data.isHidden})">${data.isHidden ? "Unhide" : "Hide"}</button>
-                            <button class="btn-danger" onclick="delEvent('${id}')">Purge</button>
-                        </td>
+                    const data = docSnap.data(); const id = docSnap.id;
+                    tbody.innerHTML += `
+                        <tr>
+                            <td><strong>${data.title}</strong><br><span style="font-size: 11px;">${data.date}</span></td>
+                            <td>${data.status}</td>
+                            <td>${data.isHidden ? "<span style='color:red;'>Hidden</span>" : "<span style='color:#00ffcc;'>Public</span>"}</td>
+                            <td>
+                                <button class="btn-action" onclick="editEvent('${id}', '${data.title.replace(/'/g, "\\'")}', '${data.date}', '${data.prizePool || ''}', '${data.status}', '${(data.description || '').replace(/'/g, "\\'").replace(/\n/g, "\\n")}')">Edit</button>
+                                <button class="btn-secondary" onclick="toggleVis('${id}', ${data.isHidden})">${data.isHidden ? "Unhide" : "Hide"}</button>
+                                <button class="btn-danger" onclick="delEvent('${id}')">Purge</button>
+                            </td>
+                        </tr>
                     `;
-                    tbody.appendChild(tr);
                 });
             });
         }
 
         window.editEvent = (id, title, date, prize, status, desc) => {
-            isEditMode = true;
-            document.getElementById('formTitle').innerText = "Update Event Data";
-            document.getElementById('formTitle').style.color = "var(--lvlup-edit)";
-            document.getElementById('saveTournamentBtn').innerText = "Submit Update";
-            document.getElementById('saveTournamentBtn').classList.add("btn-edit-mode");
-            document.getElementById('cancelEditBtn').style.display = "block";
-            
-            document.getElementById('tId').value = id;
-            document.getElementById('tTitle').value = title;
-            document.getElementById('tDate').value = date;
-            document.getElementById('tPrize').value = prize;
-            document.getElementById('tStatus').value = status;
-            document.getElementById('tDesc').value = desc;
-            window.scrollTo(0, 0);
+            isEditMode = true; document.getElementById('formTitle').innerText = "Update Event Data"; document.getElementById('formTitle').style.color = "var(--lvlup-edit)"; document.getElementById('saveTournamentBtn').innerText = "Submit Update"; document.getElementById('saveTournamentBtn').classList.add("btn-edit-mode"); document.getElementById('cancelEditBtn').style.display = "block";
+            document.getElementById('tId').value = id; document.getElementById('tTitle').value = title; document.getElementById('tDate').value = date; document.getElementById('tPrize').value = prize; document.getElementById('tStatus').value = status; document.getElementById('tDesc').value = desc; window.scrollTo(0, 0);
         }
-
         document.getElementById('cancelEditBtn').addEventListener('click', exitEditMode);
-
         function exitEditMode() {
-            isEditMode = false;
-            document.getElementById('formTitle').innerText = "Deploy Tournament";
-            document.getElementById('formTitle').style.color = "var(--lvlup-accent)";
-            document.getElementById('saveTournamentBtn').innerText = "Initialize Event";
-            document.getElementById('saveTournamentBtn').classList.remove("btn-edit-mode");
-            document.getElementById('cancelEditBtn').style.display = "none";
-            clearForm();
+            isEditMode = false; document.getElementById('formTitle').innerText = "Deploy Tournament"; document.getElementById('formTitle').style.color = "var(--lvlup-accent)"; document.getElementById('saveTournamentBtn').innerText = "Initialize Event"; document.getElementById('saveTournamentBtn').classList.remove("btn-edit-mode"); document.getElementById('cancelEditBtn').style.display = "none"; clearForm();
         }
-
         function clearForm() {
-            document.getElementById('tId').value = ''; document.getElementById('tTitle').value = '';
-            document.getElementById('tDate').value = ''; document.getElementById('tPrize').value = '';
-            document.getElementById('tDesc').value = '';
+            document.getElementById('tId').value = ''; document.getElementById('tTitle').value = ''; document.getElementById('tDate').value = ''; document.getElementById('tPrize').value = ''; document.getElementById('tDesc').value = '';
         }
-
         window.toggleVis = async (id, isHidden) => await updateDoc(doc(db, "tournaments", id), { isHidden: !isHidden });
         window.delEvent = async (id) => { if(confirm("Permanently delete?")) await deleteDoc(doc(db, "tournaments", id)); }
 
+        // --- USER AUDIT LOGIC ---
         async function loadUsers() {
             const tbody = document.getElementById('userTableBody'); tbody.innerHTML = "";
             (await getDocs(collection(db, "users"))).forEach(d => {
