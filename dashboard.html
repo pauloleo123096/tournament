@@ -3,70 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LVLUP | Captain Dashboard</title>
+    <title>LVLUP | Captain's Dashboard</title>
     <style>
-        :root { 
-            --lvlup-bg: #0a0f16; --lvlup-panel: #131c28; 
-            --lvlup-accent: #00ffcc; --lvlup-text: #f8fafc; 
-            --lvlup-text-muted: #64748b; --lvlup-nav: #05080c;
-        }
-
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--lvlup-bg); color: var(--lvlup-text); margin: 0; }
-        
-        nav { background: var(--lvlup-nav); padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--lvlup-accent); }
-        .logo { font-size: 24px; font-weight: bold; color: var(--lvlup-accent); letter-spacing: 2px; }
-        
-        .logout-btn { background: transparent; color: var(--lvlup-text-muted); border: 1px solid var(--lvlup-text-muted); padding: 8px 16px; border-radius: 4px; cursor: pointer; transition: 0.3s; }
-        .logout-btn:hover { background: rgba(255,255,255,0.1); color: white; }
-
-        .container { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
-        
-        .profile-card { background: var(--lvlup-panel); padding: 30px; border-radius: 12px; border-left: 4px solid var(--lvlup-accent); margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
-        .profile-info h1 { margin: 0 0 10px 0; font-size: 32px; }
-        .profile-info p { margin: 5px 0; color: var(--lvlup-text-muted); }
-        .role-badge { background: #1e293b; color: var(--lvlup-accent); padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; text-transform: uppercase; border: 1px solid var(--lvlup-accent); }
-
-        .action-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-        
-        .action-card { background: var(--lvlup-panel); padding: 30px; border-radius: 12px; text-align: center; border: 1px solid #1e293b; transition: 0.3s; }
-        .action-card:hover { border-color: var(--lvlup-accent); transform: translateY(-5px); }
-        .action-card h3 { margin-top: 0; font-size: 22px; }
-        .action-card p { color: var(--lvlup-text-muted); margin-bottom: 20px; }
-        
-        .btn-primary { background: var(--lvlup-accent); color: #000; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; display: inline-block; }
-        .btn-secondary { background: #1e293b; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; display: inline-block; }
+        :root { --bg: #0a0f16; --panel: #131c28; --accent: #00ffcc; --text: #f8fafc; --muted: #64748b; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--text); margin: 0; }
+        nav { background: #05080c; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); }
+        .logo { font-size: 24px; font-weight: bold; color: var(--accent); text-decoration: none; letter-spacing: 2px; }
+        .btn-logout { background: transparent; border: 1px solid #ef4444; color: #ef4444; padding: 8px 16px; border-radius: 4px; cursor: pointer; transition: 0.2s; font-weight: bold;}
+        .btn-logout:hover { background: #ef4444; color: white; }
+        .container { max-width: 1000px; margin: 40px auto; padding: 0 20px; display: none; } /* Hidden until auth check */
+        .panel { background: var(--panel); padding: 30px; border-radius: 12px; border: 1px solid #1e293b; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
 
     <nav>
-        <div class="logo">LVLUP TOURNAMENTS</div>
-        <button id="signOutBtn" class="logout-btn">Sign Out</button>
+        <a href="index.html" class="logo">LVLUP</a>
+        <div style="display: flex; gap: 15px; align-items: center;">
+            <span id="userGreeting" style="color: var(--muted); font-weight: bold;"></span>
+            <a href="nexus-7x9q.html" id="adminLink" style="display: none; color: var(--accent); font-weight: bold; text-decoration: none;">Nexus Access</a>
+            <button class="btn-logout" id="logoutBtn">Disengage</button>
+        </div>
     </nav>
 
-    <div class="container" style="display: none;" id="dashboardContent">
-        <div class="profile-card">
-            <div class="profile-info">
-                <h1 id="displayName">Loading Name...</h1>
-                <p>Email: <span id="displayEmail" style="color: white;">...</span></p>
-            </div>
-            <div>
-                <span id="displayRole" class="role-badge">Loading...</span>
-            </div>
-        </div>
-
-        <div class="action-grid">
-            <div class="action-card">
-                <h3>Enroll a Squad</h3>
-                <p>Register a new team for upcoming LVLUP competitive circuits.</p>
-                <a href="register.html" class="btn-primary">Register Team</a>
-            </div>
-
-            <div class="action-card">
-                <h3>My Active Teams</h3>
-                <p>View the current status, wins, and losses of your registered rosters.</p>
-                <a href="#" class="btn-secondary" onclick="alert('Team Management module coming soon!')">Manage Teams</a>
-            </div>
+    <div class="container" id="dashboardContent">
+        <div class="panel">
+            <h1 style="margin-top: 0; color: var(--accent);">Operational Hub</h1>
+            <p style="color: var(--muted);">Phase 3 Target: Team Management and Roster editing will be constructed here.</p>
         </div>
     </div>
 
@@ -77,30 +40,25 @@
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
+                // Show content
                 document.getElementById('dashboardContent').style.display = "block";
                 
-                try {
-                    // Fetch the user's profile from Firestore
-                    const userProfile = await getDoc(doc(db, "users", user.uid));
-                    if (userProfile.exists()) {
-                        const data = userProfile.data();
-                        document.getElementById('displayName').innerText = data.name;
-                        document.getElementById('displayEmail').innerText = data.email;
-                        document.getElementById('displayRole').innerText = data.role;
-                    } else {
-                        document.getElementById('displayName').innerText = "Profile Setup Pending";
-                        document.getElementById('displayEmail').innerText = user.email;
-                    }
-                } catch (err) {
-                    console.error("Error fetching profile:", err);
+                // Fetch profile data
+                const profile = await getDoc(doc(db, "users", user.uid));
+                if(profile.exists()) {
+                    const data = profile.data();
+                    document.getElementById('userGreeting').innerText = `Welcome, ${data.name}`;
+                    // If Admin, show the Nexus link
+                    if(data.role === "admin") { document.getElementById('adminLink').style.display = "inline-block"; }
                 }
             } else {
-                window.location.href = "login.html";
+                // Kick to login
+                window.location.replace("login.html");
             }
         });
 
-        document.getElementById('signOutBtn').addEventListener('click', async () => {
-            await signOut(auth);
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            signOut(auth).then(() => window.location.replace("index.html"));
         });
     </script>
 </body>
