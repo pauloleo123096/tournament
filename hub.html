@@ -3,89 +3,109 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LVLUP MLBB Tournament Hub</title>
+    <title>LVLUP | Live Broadcast</title>
     <style>
         :root { 
             --lvlup-bg: #0a0f16; --lvlup-panel: #131c28; 
             --lvlup-accent: #00ffcc; --lvlup-text: #f8fafc; 
-            --lvlup-text-muted: #64748b; --lvlup-danger: #ef4444; 
+            --lvlup-text-muted: #64748b; --lvlup-nav: #05080c;
         }
 
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: var(--lvlup-bg); color: var(--lvlup-text); margin: 0; padding: 20px; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--lvlup-bg); color: var(--lvlup-text); margin: 0; }
         
-        .container { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr; gap: 20px; }
+        /* Navbar */
+        nav { background: var(--lvlup-nav); padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--lvlup-accent); }
+        .logo { font-size: 24px; font-weight: bold; color: var(--lvlup-accent); text-decoration: none; letter-spacing: 2px; }
+        .nav-links a { color: var(--lvlup-text); text-decoration: none; margin-left: 20px; font-weight: bold; }
+        .nav-links a:hover { color: var(--lvlup-accent); }
+
+        .container { max-width: 1200px; margin: 40px auto; padding: 0 20px; }
         
-        .video-container { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5); border: 1px solid #1e293b; }
+        /* Scoreboard Panel */
+        .scoreboard { background: var(--lvlup-panel); padding: 20px 40px; border-radius: 12px; border: 1px solid #ef4444; text-align: center; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .team-name { font-size: 28px; font-weight: bold; width: 40%; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .vs-badge { background: #ef4444; color: white; padding: 8px 16px; border-radius: 8px; font-size: 18px; font-weight: bold; }
+        
+        /* Video Player Container */
+        .video-container { position: relative; padding-bottom: 56.25%; /* 16:9 Aspect Ratio */ height: 0; overflow: hidden; border-radius: 12px; border: 1px solid #1e293b; background: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
         
-        .panel { background-color: var(--lvlup-panel); padding: 20px; border-radius: 12px; border-top: 4px solid var(--lvlup-accent); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3); }
-        h2, h3 { margin-top: 0; }
-        
-        .live-badge { background-color: var(--lvlup-danger); color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; animation: pulse 2s infinite; margin-left: 10px; vertical-align: middle; }
-        .match-up { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; font-size: 24px; font-weight: bold; }
-        .team { flex: 1; text-align: center; }
-        .vs { color: var(--lvlup-text-muted); font-size: 18px; }
-        .score { font-size: 48px; color: var(--lvlup-accent); text-shadow: 0 0 10px rgba(0, 255, 204, 0.3); }
-        
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-        
-        @media (min-width: 900px) { .container { grid-template-columns: 2fr 1fr; } }
+        .waiting-msg { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--lvlup-text-muted); text-align: center; }
     </style>
 </head>
 <body>
 
+    <nav>
+        <a href="index.html" class="logo">LVLUP</a>
+        <div class="nav-links">
+            <a href="index.html">← Back to Home</a>
+        </div>
+    </nav>
+
     <div class="container">
-        <div class="main-content">
-            <h2>LVLUP MLBB Invitational</h2>
-            <div class="video-container">
-                <iframe src="https://www.youtube.com/embed/live_stream?channel=YOUR_CHANNEL_ID" allowfullscreen></iframe>
-            </div>
+        <div class="scoreboard">
+            <div class="team-name" id="teamA">Waiting for Network...</div>
+            <div class="vs-badge">🔴 LIVE</div>
+            <div class="team-name" id="teamB">Waiting for Network...</div>
         </div>
 
-        <div class="sidebar">
-            <div class="panel">
-                <a href="index.html" style="color: var(--lvlup-accent); text-decoration: none; font-size: 14px; display: block; margin-bottom: 15px;">← Back to Home</a>
-                <h3>Current Match <span class="live-badge">LIVE</span></h3>
-                <p id="gamePhase" style="color: var(--lvlup-text-muted); margin: 0; font-style: italic;">Connecting to arena...</p>
-                
-                <div class="match-up">
-                    <div class="team">
-                        <div id="team1Name">Team A</div>
-                        <div class="score" id="team1Score">0</div>
-                    </div>
-                    <div class="vs">VS</div>
-                    <div class="team">
-                        <div id="team2Name">Team B</div>
-                        <div class="score" id="team2Score">0</div>
-                    </div>
-                </div>
+        <div class="video-container" id="streamContainer">
+            <div class="waiting-msg" id="streamStatus">
+                <h2>Broadcast Offline</h2>
+                <p>Waiting for the Admin to push the live stream link.</p>
             </div>
-
-            <div class="panel" style="margin-top: 20px;">
-                <h3>Live Leaderboard</h3>
-                <p style="color: var(--lvlup-text-muted); font-size: 14px;">(Standings module pending...)</p>
-            </div>
+            <iframe id="ytPlayer" src="" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="display: none;"></iframe>
         </div>
     </div>
 
     <script type="module">
-      import { db } from './firebase-setup.js';
-      import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { db } from './firebase-setup.js';
+        import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-      const matchRef = doc(db, "matches", "grand_finals");
-      
-      onSnapshot(matchRef, (snapshot) => {
-        if (snapshot.exists()) {
-          const data = snapshot.data();
-          document.getElementById("team1Name").innerText = data.player1;
-          document.getElementById("team2Name").innerText = data.player2;
-          document.getElementById("team1Score").innerText = data.score_p1;
-          document.getElementById("team2Score").innerText = data.score_p2;
-          document.getElementById("gamePhase").innerText = "Status: " + data.status;
-        } else {
-          document.getElementById("gamePhase").innerText = "Awaiting match data...";
+        // This function turns a normal YouTube link into an Embed link so the iframe doesn't crash
+        function formatYouTubeUrl(url) {
+            if (!url) return null;
+            let videoId = "";
+            if (url.includes("youtu.be/")) {
+                videoId = url.split("youtu.be/")[1]?.split("?")[0];
+            } else if (url.includes("watch?v=")) {
+                videoId = url.split("watch?v=")[1]?.split("&")[0];
+            } else if (url.includes("embed/")) {
+                return url; // It's already an embed link
+            }
+            return videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1` : null;
         }
-      });
+
+        // Listen for real-time changes from the Nexus
+        const matchRef = doc(db, "matches", "grand_finals");
+        
+        onSnapshot(matchRef, (snapshot) => {
+            if (snapshot.exists()) {
+                const data = snapshot.data();
+                
+                // 1. Update the Scoreboard
+                document.getElementById("teamA").innerText = data.player1 || "TBD";
+                document.getElementById("teamB").innerText = data.player2 || "TBD";
+                
+                // 2. Update the Video Player
+                const ytPlayer = document.getElementById("ytPlayer");
+                const statusMsg = document.getElementById("streamStatus");
+                const embedUrl = formatYouTubeUrl(data.streamUrl);
+
+                if (embedUrl) {
+                    // Only update the src if the URL has actually changed to prevent video stuttering
+                    if (ytPlayer.src !== embedUrl) {
+                        ytPlayer.src = embedUrl;
+                    }
+                    ytPlayer.style.display = "block";
+                    statusMsg.style.display = "none";
+                } else {
+                    ytPlayer.style.display = "none";
+                    ytPlayer.src = "";
+                    statusMsg.style.display = "block";
+                }
+            }
+        });
     </script>
 </body>
 </html>
