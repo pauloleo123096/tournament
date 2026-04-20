@@ -62,7 +62,7 @@
         import { db } from './firebase-setup.js';
         import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-        // This function turns a normal YouTube link into an Embed link so the iframe doesn't crash
+        // Upgraded YouTube Link Extractor
         function formatYouTubeUrl(url) {
             if (!url) return null;
             let videoId = "";
@@ -70,8 +70,10 @@
                 videoId = url.split("youtu.be/")[1]?.split("?")[0];
             } else if (url.includes("watch?v=")) {
                 videoId = url.split("watch?v=")[1]?.split("&")[0];
+            } else if (url.includes("/live/")) {
+                videoId = url.split("/live/")[1]?.split("?")[0];
             } else if (url.includes("embed/")) {
-                return url; // It's already an embed link
+                return url; 
             }
             return videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1` : null;
         }
@@ -93,7 +95,6 @@
                 const embedUrl = formatYouTubeUrl(data.streamUrl);
 
                 if (embedUrl) {
-                    // Only update the src if the URL has actually changed to prevent video stuttering
                     if (ytPlayer.src !== embedUrl) {
                         ytPlayer.src = embedUrl;
                     }
