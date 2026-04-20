@@ -56,6 +56,8 @@
                     <h2 style="margin-top: 0; color: #ef4444;">Live Broadcast Override</h2>
                     <input type="text" id="bcTeamA" placeholder="Team A Name">
                     <input type="text" id="bcTeamB" placeholder="Team B Name">
+                    <input type="text" id="bcStreamLink" placeholder="YouTube Link (e.g. https://youtu.be/...)">
+                    
                     <button class="btn-primary" style="background: #ef4444; color: white;" id="updateBroadcastBtn">Update Live Stream</button>
                     <div id="bcMessage" style="font-size: 14px; margin-top: 10px;"></div>
                 </div>
@@ -130,14 +132,23 @@
             }
         });
 
-        // Broadcast Override
+        // Broadcast Override (UPDATED TO INCLUDE STREAM LINK)
         document.getElementById('updateBroadcastBtn').addEventListener('click', async () => {
             const tA = document.getElementById('bcTeamA').value;
             const tB = document.getElementById('bcTeamB').value;
+            const sLink = document.getElementById('bcStreamLink').value; // Get the link
             const msg = document.getElementById('bcMessage');
+            
             try {
-                await setDoc(doc(db, "matches", "grand_finals"), { player1: tA, player2: tB }, { merge: true });
-                msg.style.color = "var(--lvlup-accent)"; msg.innerText = "Stream Updated!";
+                // Merge pushes the data without deleting other fields
+                await setDoc(doc(db, "matches", "grand_finals"), { player1: tA, player2: tB, streamUrl: sLink }, { merge: true });
+                msg.style.color = "var(--lvlup-accent)"; msg.innerText = "Stream & Matchup Updated!";
+                
+                // Clear the form fields after successful push
+                document.getElementById('bcTeamA').value = '';
+                document.getElementById('bcTeamB').value = '';
+                document.getElementById('bcStreamLink').value = '';
+                
                 setTimeout(() => msg.innerText = "", 3000);
             } catch (e) { msg.style.color = "red"; msg.innerText = "Error updating stream."; }
         });
