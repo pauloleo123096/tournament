@@ -97,7 +97,13 @@
 
             <div>
                 <div class="panel" style="border-color: var(--lvlup-accent);">
-                    <h2 style="margin-top: 0; color: var(--lvlup-accent);">Roster Approval Queue</h2>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h2 style="margin: 0; color: var(--lvlup-accent);">Roster Approval Queue</h2>
+                        <select id="teamFilterDropdown" style="width: auto; margin: 0; padding: 8px;">
+                            <option value="all">Loading events...</option>
+                        </select>
+                    </div>
+                    
                     <table>
                         <thead>
                             <tr>
@@ -147,19 +153,23 @@
     <script type="module">
         import { db, auth } from './firebase-setup.js';
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { doc, getDoc, collection, getDocs, deleteDoc, addDoc, updateDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { doc, getDoc, collection, getDocs, deleteDoc, addDoc, updateDoc, onSnapshot, query, orderBy, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         let isEditMode = false;
+        let teamUnsubscribe = null; // Used to kill the team database listener when you switch dropdown filters
 
+        // ==========================================
+        // ADMIN AUTHENTICATION
+        // ==========================================
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 const profile = await getDoc(doc(db, "users", user.uid));
                 if (profile.exists() && profile.data().role === "admin") {
                     document.getElementById('adminContent').style.display = "block";
                     loadUsers();
-                    loadTournaments();
+                    loadTournaments(); // This now also builds the dropdown!
                     loadStreams();
-                    loadTeams(); // NEW
+                    loadTeams("all");  // Default loads all teams on boot
                 } else {
                     window.location.replace("index.html");
                 }
@@ -168,18 +178,44 @@
             }
         });
 
-        // --- 1. NEW: TEAM APPROVAL LOGIC ---
-        function loadTeams() {
-            onSnapshot(query(collection(db, "teams"), orderBy("createdAt", "desc")), (snapshot) => {
+        // ==========================================
+        // 1. TEAM APPROVAL & FILTER LOGIC (BUG PATCH #2)
+        // ==========================================
+        // Listens for dropdown changes and reloads the table
+        document.getElementById('teamFilterDropdown').addEventListener('change', (e) => {
+            loadTeams(e.target.value);
+        });
+
+        function loadTeams(tournamentId) {
+            // If a listener already exists, kill it to prevent double-rendering and memory leaks
+            if (teamUnsubscribe) teamUnsubscribe();
+
+            let q;
+            // Build query based on dropdown selection
+            if (tournamentId === "all") {
+                q = query(collection(db, "teams"), orderBy("createdAt", "desc"));
+            } else {
+                // To avoid requiring complex composite indexes in Firestore, we just pull the specific tournament
+                q = query(collection(db, "teams"), where("tournamentId", "==", tournamentId));
+            }
+
+            teamUnsubscribe = onSnapshot(q, (snapshot) => {
                 const tbody = document.getElementById('teamTableBody');
                 tbody.innerHTML = "";
-                if (snapshot.empty) { tbody.innerHTML = "<tr><td colspan='4' style='color: var(--lvlup-text-muted); text-align: center; padding: 20px;'>No rosters submitted yet.</td></tr>"; return; }
+                if (snapshot.empty) { tbody.innerHTML = "<tr><td colspan='4' style='color: var(--lvlup-text-muted); text-align: center; padding: 20px;'>No rosters found for this selection.</td></tr>"; return; }
 
-                snapshot.forEach((docSnap) => {
-                    const data = docSnap.data();
-                    const id = docSnap.id;
+                // Sort the filtered array in Javascript to bypass Firebase index requirements
+                let teamsArray = [];
+                snapshot.forEach(docSnap => teamsArray.push({ id: docSnap.id, ...docSnap.data() }));
+                
+                if(tournamentId !== "all") {
+                    // Manually sort newest first if we used the where() query
+                    teamsArray.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+                }
+
+                // Render the table
+                teamsArray.forEach((data) => {
                     const statusClass = data.status === "Approved" ? "status-approved" : (data.status === "Disqualified" ? "status-disqualified" : "status-pending");
-                    
                     tbody.innerHTML += `
                         <tr>
                             <td><strong>${data.teamName}</strong><br><span style="font-size:11px; color:var(--lvlup-accent)">${data.tournamentName}</span></td>
@@ -194,20 +230,24 @@
                             </td>
                             <td><span class="status-pill ${statusClass}">${data.status || 'Pending'}</span></td>
                             <td>
-                                <button class="btn-approve" onclick="updateTeamStatus('${id}', 'Approved')">Approve</button>
-                                <button class="btn-reject" onclick="updateTeamStatus('${id}', 'Disqualified')">Bounce</button>
+                                <button class="btn-approve" onclick="updateTeamStatus('${data.id}', 'Approved')">Approve</button>
+                                <button class="btn-reject" onclick="updateTeamStatus('${data.id}', 'Disqualified')">Bounce</button>
                             </td>
                         </tr>
                     `;
                 });
             });
         }
+        
+        // Updates the team document with the new status
         window.updateTeamStatus = async (id, newStatus) => {
             await updateDoc(doc(db, "teams", id), { status: newStatus });
         };
 
 
-        // --- 2. RESTORED STREAM CMS LOGIC ---
+        // ==========================================
+        // 2. STREAM CMS LOGIC
+        // ==========================================
         document.getElementById('saveStreamBtn').addEventListener('click', async () => {
             const tA = document.getElementById('bcTeamA').value;
             const tB = document.getElementById('bcTeamB').value;
@@ -246,7 +286,9 @@
         window.delStream = async (id) => { if(confirm("Permanently delete stream?")) await deleteDoc(doc(db, "streams", id)); }
 
 
-        // --- 3. RESTORED TOURNAMENT CMS LOGIC ---
+        // ==========================================
+        // 3. TOURNAMENT CMS LOGIC (UPDATED WITH CASCADING DELETE)
+        // ==========================================
         document.getElementById('saveTournamentBtn').addEventListener('click', async () => {
             const id = document.getElementById('tId').value; const title = document.getElementById('tTitle').value; const date = document.getElementById('tDate').value; const prize = document.getElementById('tPrize').value; const status = document.getElementById('tStatus').value; const desc = document.getElementById('tDesc').value; const msg = document.getElementById('tMessage');
             if (!title || !date) { msg.style.color = "red"; msg.innerText = "Title and Date required."; return; }
@@ -263,11 +305,20 @@
             } catch (e) { msg.style.color = "red"; msg.innerText = "Error: " + e.message; }
         });
 
+        // Pulls tournaments AND populates the team filter dropdown simultaneously
         function loadTournaments() {
             onSnapshot(query(collection(db, "tournaments"), orderBy("createdAt", "desc")), (snapshot) => {
-                const tbody = document.getElementById('tourneyTableBody'); tbody.innerHTML = "";
+                const tbody = document.getElementById('tourneyTableBody'); 
+                const filterDropdown = document.getElementById('teamFilterDropdown');
+                const currentFilter = filterDropdown.value; // Store current selection so it doesn't reset when data updates
+                
+                tbody.innerHTML = "";
+                filterDropdown.innerHTML = '<option value="all">View All Events</option>'; // Reset Dropdown
+
                 snapshot.forEach((docSnap) => {
                     const data = docSnap.data(); const id = docSnap.id;
+                    
+                    // 1. Build Tournament Table row
                     tbody.innerHTML += `
                         <tr>
                             <td><strong>${data.title}</strong><br><span style="font-size: 11px;">${data.date}</span></td>
@@ -280,7 +331,15 @@
                             </td>
                         </tr>
                     `;
+
+                    // 2. Build Dropdown option
+                    filterDropdown.innerHTML += `<option value="${id}">${data.title}</option>`;
                 });
+
+                // Restore previous selection if it still exists
+                if(currentFilter !== "all" && filterDropdown.querySelector(`option[value="${currentFilter}"]`)) {
+                    filterDropdown.value = currentFilter;
+                }
             });
         }
 
@@ -288,24 +347,50 @@
             isEditMode = true; document.getElementById('formTitle').innerText = "Update Event Data"; document.getElementById('formTitle').style.color = "var(--lvlup-edit)"; document.getElementById('saveTournamentBtn').innerText = "Submit Update"; document.getElementById('saveTournamentBtn').classList.add("btn-edit-mode"); document.getElementById('cancelEditBtn').style.display = "block";
             document.getElementById('tId').value = id; document.getElementById('tTitle').value = title; document.getElementById('tDate').value = date; document.getElementById('tPrize').value = prize; document.getElementById('tStatus').value = status; document.getElementById('tDesc').value = desc; window.scrollTo(0, 0);
         }
+        
         document.getElementById('cancelEditBtn').addEventListener('click', exitEditMode);
+        
         function exitEditMode() {
             isEditMode = false; document.getElementById('formTitle').innerText = "Deploy Tournament"; document.getElementById('formTitle').style.color = "var(--lvlup-accent)"; document.getElementById('saveTournamentBtn').innerText = "Initialize Event"; document.getElementById('saveTournamentBtn').classList.remove("btn-edit-mode"); document.getElementById('cancelEditBtn').style.display = "none"; clearForm();
         }
+        
         function clearForm() {
             document.getElementById('tId').value = ''; document.getElementById('tTitle').value = ''; document.getElementById('tDate').value = ''; document.getElementById('tPrize').value = ''; document.getElementById('tDesc').value = '';
         }
+        
         window.toggleVis = async (id, isHidden) => await updateDoc(doc(db, "tournaments", id), { isHidden: !isHidden });
-        window.delEvent = async (id) => { if(confirm("Permanently delete?")) await deleteDoc(doc(db, "tournaments", id)); }
+        
+        // BUG PATCH #1: Cascading Delete
+        window.delEvent = async (id) => { 
+            if(confirm("CRITICAL WARNING: Permanently delete this event AND wipe all teams registered for it? This cannot be undone.")) {
+                
+                // 1. Fetch all teams tied to this tournament ID
+                const q = query(collection(db, "teams"), where("tournamentId", "==", id));
+                const teamSnaps = await getDocs(q);
 
-        // --- 4. RESTORED USER AUDIT LOGIC ---
+                // 2. Loop through and delete them all first (so they don't become orphaned)
+                const deletePromises = [];
+                teamSnaps.forEach(docSnap => {
+                    deletePromises.push(deleteDoc(doc(db, "teams", docSnap.id)));
+                });
+                await Promise.all(deletePromises); // Executes all deletions simultaneously
+
+                // 3. Finally, delete the actual tournament
+                await deleteDoc(doc(db, "tournaments", id)); 
+            } 
+        }
+
+        // ==========================================
+        // 4. USER AUDIT LOGIC
+        // ==========================================
         async function loadUsers() {
             const tbody = document.getElementById('userTableBody'); tbody.innerHTML = "";
             (await getDocs(collection(db, "users"))).forEach(d => {
                 tbody.innerHTML += `<tr><td><strong>${d.data().name}</strong><br><span style="font-size:11px;">${d.data().email}</span></td><td>${d.data().role}</td><td><button class="btn-danger" onclick="delUser('${d.id}')">Purge</button></td></tr>`;
             });
         }
-        window.delUser = async (id) => { if(confirm("Purge user?")) { await deleteDoc(doc(db, "users", id)); loadUsers(); } }
+        
+        window.delUser = async (id) => { if(confirm("Purge user profile?")) { await deleteDoc(doc(db, "users", id)); loadUsers(); } }
     </script>
 </body>
 </html>
