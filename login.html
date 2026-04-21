@@ -6,15 +6,18 @@
     <title>LVLUP | Captain's Portal</title>
     <style>
         :root { --bg: #0a0f16; --panel: #131c28; --accent: #00ffcc; --text: #f8fafc; --muted: #64748b; }
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; justify-content: center; align-items: center; margin: 0; }
-        .auth-box { background: var(--panel); padding: 40px; border-radius: 12px; border: 1px solid #1e293b; width: 100%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        h2 { margin-top: 0; color: var(--accent); text-align: center; margin-bottom: 30px;}
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; justify-content: center; align-items: center; margin: 0; padding: 20px; box-sizing: border-box;}
+        .auth-box { background: var(--panel); padding: 40px; border-radius: 12px; border: 1px solid #1e293b; width: 100%; max-width: 450px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h2 { margin-top: 0; color: var(--accent); text-align: center; margin-bottom: 5px;}
+        .helper-text { text-align: center; color: var(--muted); font-size: 14px; margin-bottom: 30px; line-height: 1.5; }
+        
         input { width: 100%; padding: 12px; margin-bottom: 20px; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 6px; box-sizing: border-box;}
         button { width: 100%; padding: 12px; background: var(--accent); color: #000; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; margin-bottom: 15px;}
         button:hover { background: #00ccaa; }
-        .toggle-text { text-align: center; color: var(--muted); font-size: 14px; }
-        .toggle-text a { color: var(--accent); cursor: pointer; text-decoration: none; }
-        .back-link { display: block; text-align: center; margin-top: 20px; color: var(--muted); text-decoration: none; font-size: 14px;}
+        
+        .toggle-text { text-align: center; color: var(--muted); font-size: 14px; padding-top: 15px; border-top: 1px solid #1e293b; margin-top: 10px;}
+        .toggle-text a { color: var(--accent); cursor: pointer; text-decoration: none; font-weight: bold;}
+        .back-link { display: block; text-align: center; margin-top: 25px; color: var(--muted); text-decoration: none; font-size: 14px;}
         .hidden { display: none; }
     </style>
 </head>
@@ -23,26 +26,29 @@
     <div class="auth-box">
         <div id="mainForm">
             <h2 id="formTitle">Captain Login</h2>
-            <input type="text" id="name" placeholder="Captain Name" class="hidden">
+            <div class="helper-text" id="formSubtitle">Log in to manage your active MLBB rosters, track tournament statuses, and edit your squads.</div>
+            
+            <input type="text" id="name" placeholder="Your Full Name (or Captain Alias)" class="hidden">
             <input type="email" id="email" placeholder="Email Address">
-            <input type="password" id="password" placeholder="Password">
-            <button id="authBtn">Enter Portal</button>
+            <input type="password" id="password" placeholder="Password (Minimum 6 characters)">
+            <button id="authBtn">Secure Login</button>
+            
             <div class="toggle-text">
-                <span id="toggleHint">No squad yet?</span> <a id="toggleLink">Register here</a><br><br>
+                <span id="toggleHint">Don't have a Captain Account yet?</span> <br><a id="toggleLink" style="display:inline-block; margin-top:5px;">Create an Account to Register Teams</a><br><br>
                 <a id="forgotLink" style="font-size: 13px; color: var(--muted); text-decoration: underline;">Forgot Password?</a>
             </div>
         </div>
 
         <div id="resetForm" class="hidden">
             <h2>Reset Protocol</h2>
-            <p style="font-size: 14px; color: var(--muted); text-align: center; margin-bottom: 20px;">Enter your email to receive a recovery link.</p>
-            <input type="email" id="resetEmail" placeholder="Email Address">
+            <div class="helper-text">Enter your email address and we will send you a secure link to reset your Captain's password.</div>
+            <input type="email" id="resetEmail" placeholder="Account Email Address">
             <button id="sendResetBtn">Send Recovery Link</button>
-            <div class="toggle-text"><a id="backToLogin">← Back to Login</a></div>
+            <div class="toggle-text" style="border:none;"><a id="backToLogin">← Return to Login</a></div>
         </div>
 
-        <div id="errMsg" style="color: #ef4444; margin-top: 15px; text-align: center; font-size: 14px;"></div>
-        <a href="index.html" class="back-link">Return to Basecamp</a>
+        <div id="errMsg" style="color: #ef4444; margin-top: 15px; text-align: center; font-size: 14px; font-weight:bold;"></div>
+        <a href="index.html" class="back-link">Return to Home Base</a>
     </div>
 
     <script type="module">
@@ -50,8 +56,15 @@
         import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-        // Prevent logged-in users from seeing login page
-        onAuthStateChanged(auth, (user) => { if (user) window.location.replace("dashboard.html"); });
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlId = urlParams.get('id');
+
+        // Prevent logged-in users from seeing login page (keeps their URL ID intact!)
+        onAuthStateChanged(auth, (user) => { 
+            if (user) {
+                window.location.replace(urlId ? `register.html?id=${urlId}` : "dashboard.html");
+            } 
+        });
 
         let isLogin = true;
         const msg = document.getElementById('errMsg');
@@ -59,11 +72,14 @@
         // UI Toggles
         document.getElementById('toggleLink').addEventListener('click', () => {
             isLogin = !isLogin;
-            document.getElementById('formTitle').innerText = isLogin ? "Captain Login" : "Register Profile";
-            document.getElementById('authBtn').innerText = isLogin ? "Enter Portal" : "Create Profile";
+            document.getElementById('formTitle').innerText = isLogin ? "Captain Login" : "Create Captain Account";
+            document.getElementById('formSubtitle').innerText = isLogin 
+                ? "Log in to manage your active MLBB rosters, track tournament statuses, and edit your squads." 
+                : "Step 1: Create your account. Step 2: Enroll your squad. You must be a registered Captain to enter tournaments.";
+            document.getElementById('authBtn').innerText = isLogin ? "Secure Login" : "Create Captain Account";
             document.getElementById('name').classList.toggle('hidden', isLogin);
-            document.getElementById('toggleHint').innerText = isLogin ? "No squad yet?" : "Already registered?";
-            document.getElementById('toggleLink').innerText = isLogin ? "Register here" : "Login here";
+            document.getElementById('toggleHint').innerText = isLogin ? "Don't have a Captain Account yet?" : "Already have a Captain Account?";
+            document.getElementById('toggleLink').innerText = isLogin ? "Create an Account to Register Teams" : "Log in to your Account";
             document.getElementById('forgotLink').classList.toggle('hidden', !isLogin);
             msg.innerText = "";
         });
@@ -85,29 +101,40 @@
             const email = document.getElementById('email').value;
             const pass = document.getElementById('password').value;
             const name = document.getElementById('name').value;
-            if (!email || !pass) return msg.innerText = "Provide credentials.";
+            if (!email || !pass) return msg.innerText = "Please provide your credentials.";
 
+            btnLoadingState(true);
             try {
                 if (isLogin) {
                     await signInWithEmailAndPassword(auth, email, pass);
                 } else {
-                    if (!name) return msg.innerText = "Name required for registration.";
+                    if (!name) { btnLoadingState(false); return msg.innerText = "Name is required for registration."; }
+                    if (pass.length < 6) { btnLoadingState(false); return msg.innerText = "Password must be at least 6 characters."; }
                     const creds = await createUserWithEmailAndPassword(auth, email, pass);
                     await setDoc(doc(db, "users", creds.user.uid), { email, name, role: "captain", createdAt: new Date().toISOString() });
                 }
-            } catch (e) { msg.innerText = "Error: " + e.message; }
+            } catch (e) { 
+                btnLoadingState(false);
+                msg.innerText = "Error: " + e.message.replace("Firebase: ", ""); 
+            }
         });
 
-        // Password Reset Execution
         document.getElementById('sendResetBtn').addEventListener('click', async () => {
             const email = document.getElementById('resetEmail').value;
-            if(!email) return msg.innerText = "Provide email address.";
+            if(!email) return msg.innerText = "Provide an email address.";
             try {
                 await sendPasswordResetEmail(auth, email);
                 msg.style.color = "var(--accent)";
                 msg.innerText = "Recovery email sent. Check your inbox.";
             } catch(e) { msg.style.color = "#ef4444"; msg.innerText = "Error: " + e.message; }
         });
+
+        function btnLoadingState(isLoading) {
+            const btn = document.getElementById('authBtn');
+            btn.disabled = isLoading;
+            btn.innerText = isLoading ? "Authenticating..." : (isLogin ? "Secure Login" : "Create Captain Account");
+            btn.style.opacity = isLoading ? "0.7" : "1";
+        }
     </script>
 </body>
 </html>
