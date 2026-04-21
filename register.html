@@ -89,10 +89,8 @@
         const urlParams = new URLSearchParams(window.location.search);
         const urlId = urlParams.get('id');
 
-        // STRICT EVENT LOCKOUT
         async function fetchTargetTournament() {
             if (!urlId) {
-                // If there is no ID, hide the form and show the error block
                 formBody.style.display = 'none';
                 document.getElementById('targetBanner').style.borderLeftColor = "var(--lvlup-danger)";
                 document.getElementById('targetBanner').innerHTML = `
@@ -113,7 +111,6 @@
                     btn.disabled = false;
                     document.getElementById('targetEventName').innerText = targetTourneyName;
                 } else {
-                    // ID exists in URL, but it's fake/deleted
                     formBody.style.display = 'none';
                     document.getElementById('targetBanner').style.borderLeftColor = "var(--lvlup-danger)";
                     document.getElementById('targetBanner').innerHTML = `
@@ -130,6 +127,12 @@
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
+                // NEW: Security Intercept
+                if (!user.emailVerified) {
+                    window.location.replace("dashboard.html"); // Bounces them back to the lockout screen
+                    return;
+                }
+                
                 currentUserId = user.uid;
                 document.getElementById('registrationForm').style.display = "block";
                 fetchTargetTournament();
