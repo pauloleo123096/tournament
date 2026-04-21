@@ -17,7 +17,7 @@
         .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--lvlup-accent); padding-bottom: 20px; margin-bottom: 30px; }
         .header h1 { margin: 0; color: var(--lvlup-accent); }
         
-        .grid-layout { display: grid; grid-template-columns: 1fr 2.5fr; gap: 20px; }
+        .grid-layout { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
         .panel { background: var(--lvlup-panel); padding: 25px; border-radius: 12px; border: 1px solid #1e293b; box-shadow: 0 10px 25px rgba(0,0,0,0.5); margin-bottom: 20px;}
         
         input, select, textarea { width: 100%; padding: 12px; margin: 10px 0 20px; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 6px; box-sizing: border-box; font-family: inherit; }
@@ -25,24 +25,36 @@
         
         .btn-primary { width: 100%; background: var(--lvlup-accent); color: #000; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; margin-bottom: 10px;}
         .btn-primary:hover { background: #00ccaa; }
+        .btn-edit-mode { background: var(--lvlup-edit); color: #000; }
+        .btn-edit-mode:hover { background: #d97706; }
         
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #1e293b; vertical-align: top; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #1e293b; vertical-align: middle; }
         th { color: var(--lvlup-text-muted); text-transform: uppercase; font-size: 12px; }
         
-        /* Action Buttons */
-        .btn-approve { background: rgba(16, 185, 129, 0.1); border: 1px solid var(--lvlup-success); color: var(--lvlup-success); padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; margin-bottom: 5px; width: 100%; }
-        .btn-approve:hover { background: var(--lvlup-success); color: white; }
+        /* Standard Action Buttons */
+        .btn-danger { background: transparent; border: 1px solid var(--lvlup-danger); color: var(--lvlup-danger); padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; margin-right: 5px; margin-bottom: 5px;}
+        .btn-danger:hover { background: var(--lvlup-danger); color: white; }
         
-        .btn-reject { background: rgba(239, 68, 68, 0.1); border: 1px solid var(--lvlup-danger); color: var(--lvlup-danger); padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; width: 100%; }
+        .btn-secondary { background: transparent; border: 1px solid var(--lvlup-text-muted); color: var(--lvlup-text); padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; margin-right: 5px; margin-bottom: 5px;}
+        .btn-secondary:hover { border-color: var(--lvlup-accent); color: var(--lvlup-accent); }
+
+        .btn-action { background: transparent; border: 1px solid var(--lvlup-edit); color: var(--lvlup-edit); padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; margin-right: 5px; margin-bottom: 5px;}
+        .btn-action:hover { background: var(--lvlup-edit); color: #000; }
+
+        /* Roster Approval Specifics */
+        .btn-approve { background: rgba(16, 185, 129, 0.1); border: 1px solid var(--lvlup-success); color: var(--lvlup-success); padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; margin-right: 5px; }
+        .btn-approve:hover { background: var(--lvlup-success); color: white; }
+        .btn-reject { background: rgba(239, 68, 68, 0.1); border: 1px solid var(--lvlup-danger); color: var(--lvlup-danger); padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; }
         .btn-reject:hover { background: var(--lvlup-danger); color: white; }
-
-        .status-pill { padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: bold; text-transform: uppercase; }
-        .status-pending { background: var(--lvlup-edit); color: #000; }
-        .status-approved { background: var(--lvlup-success); color: #fff; }
-        .status-disqualified { background: var(--lvlup-danger); color: #fff; }
-
-        .roster-small { font-size: 11px; color: var(--lvlup-text-muted); list-style: none; padding: 0; margin: 5px 0 0 0; }
+        
+        .status-pill { padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; }
+        .status-pending { background: rgba(245, 158, 11, 0.2); color: var(--lvlup-edit); border: 1px solid var(--lvlup-edit);}
+        .status-approved { background: rgba(16, 185, 129, 0.2); color: var(--lvlup-success); border: 1px solid var(--lvlup-success);}
+        .status-disqualified { background: rgba(239, 68, 68, 0.2); color: var(--lvlup-danger); border: 1px solid var(--lvlup-danger);}
+        
+        .roster-small { font-size: 12px; color: var(--lvlup-text-muted); list-style: none; padding: 0; margin: 5px 0 0 0; }
+        .roster-small li { margin-bottom: 3px; }
     </style>
 </head>
 <body>
@@ -57,25 +69,29 @@
             <div>
                 <div class="panel" style="border-color: #ef4444;">
                     <h2 style="margin-top: 0; color: #ef4444;">Deploy Broadcast</h2>
-                    <input type="text" id="bcTeamA" placeholder="Team A">
-                    <input type="text" id="bcTeamB" placeholder="Team B">
-                    <input type="text" id="bcStreamLink" placeholder="YouTube Link">
-                    <button class="btn-primary" style="background: #ef4444; color: white;" id="saveStreamBtn">Push Live</button>
+                    <input type="text" id="bcTeamA" placeholder="Team A Name">
+                    <input type="text" id="bcTeamB" placeholder="Team B Name">
+                    <input type="text" id="bcStreamLink" placeholder="YouTube Link (e.g. https://youtu.be/...)">
+                    <button class="btn-primary" style="background: #ef4444; color: white;" id="saveStreamBtn">Push to Network</button>
+                    <div id="bcMessage" style="font-size: 14px; margin-top: 10px;"></div>
                 </div>
 
-                <div class="panel">
+                <div class="panel" id="tournamentFormPanel">
                     <h2 id="formTitle">Deploy Tournament</h2>
                     <input type="hidden" id="tId">
-                    <input type="text" id="tTitle" placeholder="Event Title">
+                    <input type="text" id="tTitle" placeholder="Event Title (e.g. Season 3 Qualifiers)">
                     <input type="date" id="tDate">
-                    <input type="text" id="tPrize" placeholder="Prize Pool">
+                    <input type="text" id="tPrize" placeholder="Prize Pool (e.g. 10,000 Diamonds)">
                     <select id="tStatus">
-                        <option value="upcoming">Upcoming</option>
-                        <option value="live">LIVE</option>
-                        <option value="completed">Completed</option>
+                        <option value="upcoming">Status: Upcoming</option>
+                        <option value="live">Status: LIVE</option>
+                        <option value="completed">Status: Completed</option>
                     </select>
-                    <textarea id="tDesc" placeholder="Description..." rows="3"></textarea>
+                    <textarea id="tDesc" placeholder="Tournament Rules & Description..." rows="5"></textarea>
+                    
                     <button class="btn-primary" id="saveTournamentBtn">Initialize Event</button>
+                    <button class="btn-secondary" id="cancelEditBtn" style="display: none; width: 100%;">Cancel Edit</button>
+                    <div id="tMessage" style="font-size: 14px; margin-top: 10px;"></div>
                 </div>
             </div>
 
@@ -91,23 +107,37 @@
                                 <th>Action</th>
                             </tr>
                         </thead>
-                        <tbody id="teamTableBody"><tr><td colspan="4">Scanning network for squads...</td></tr></tbody>
+                        <tbody id="teamTableBody"><tr><td colspan="4">Loading network squads...</td></tr></tbody>
                     </table>
                 </div>
 
                 <div class="panel">
-                    <h2>Broadcast Archive</h2>
+                    <h2 style="margin-top: 0; color: #ef4444;">Broadcast Management</h2>
                     <table>
-                        <thead><tr><th>Matchup</th><th>Visibility</th><th>Action</th></tr></thead>
-                        <tbody id="streamTableBody"></tbody>
+                        <thead>
+                            <tr><th>Matchup</th><th>Visibility</th><th>Action</th></tr>
+                        </thead>
+                        <tbody id="streamTableBody"><tr><td colspan="3">Loading...</td></tr></tbody>
                     </table>
                 </div>
 
                 <div class="panel">
                     <h2>Event Management</h2>
                     <table>
-                        <thead><tr><th>Tournament</th><th>Status</th><th>Action</th></tr></thead>
-                        <tbody id="tourneyTableBody"></tbody>
+                        <thead>
+                            <tr><th>Tournament</th><th>Status</th><th>Visibility</th><th>Action</th></tr>
+                        </thead>
+                        <tbody id="tourneyTableBody"><tr><td colspan="4">Loading...</td></tr></tbody>
+                    </table>
+                </div>
+
+                <div class="panel">
+                    <h2>User Audit</h2>
+                    <table>
+                        <thead>
+                            <tr><th>Captain Name</th><th>Role</th><th>Action</th></tr>
+                        </thead>
+                        <tbody id="userTableBody"><tr><td colspan="3">Loading...</td></tr></tbody>
                     </table>
                 </div>
             </div>
@@ -117,26 +147,33 @@
     <script type="module">
         import { db, auth } from './firebase-setup.js';
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { doc, getDoc, collection, deleteDoc, addDoc, updateDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { doc, getDoc, collection, getDocs, deleteDoc, addDoc, updateDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        let isEditMode = false;
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 const profile = await getDoc(doc(db, "users", user.uid));
                 if (profile.exists() && profile.data().role === "admin") {
                     document.getElementById('adminContent').style.display = "block";
+                    loadUsers();
                     loadTournaments();
                     loadStreams();
                     loadTeams(); // NEW
-                } else { window.location.replace("index.html"); }
-            } else { window.location.replace("login.html"); }
+                } else {
+                    window.location.replace("index.html");
+                }
+            } else {
+                window.location.replace("login.html");
+            }
         });
 
-        // --- NEW: TEAM APPROVAL LOGIC ---
+        // --- 1. NEW: TEAM APPROVAL LOGIC ---
         function loadTeams() {
             onSnapshot(query(collection(db, "teams"), orderBy("createdAt", "desc")), (snapshot) => {
                 const tbody = document.getElementById('teamTableBody');
                 tbody.innerHTML = "";
-                if (snapshot.empty) { tbody.innerHTML = "<tr><td colspan='4'>No teams registered yet.</td></tr>"; return; }
+                if (snapshot.empty) { tbody.innerHTML = "<tr><td colspan='4' style='color: var(--lvlup-text-muted); text-align: center; padding: 20px;'>No rosters submitted yet.</td></tr>"; return; }
 
                 snapshot.forEach((docSnap) => {
                     const data = docSnap.data();
@@ -148,11 +185,11 @@
                             <td><strong>${data.teamName}</strong><br><span style="font-size:11px; color:var(--lvlup-accent)">${data.tournamentName}</span></td>
                             <td>
                                 <ul class="roster-small">
-                                    <li>• ${data.captain} (C)</li>
-                                    <li>• ${data.roster[0]}</li>
-                                    <li>• ${data.roster[1]}</li>
-                                    <li>• ${data.roster[2]}</li>
-                                    <li>• ${data.roster[3]}</li>
+                                    <li><span style="color:var(--lvlup-accent)">[C]</span> ${data.captain}</li>
+                                    <li>${data.roster[0]}</li>
+                                    <li>${data.roster[1]}</li>
+                                    <li>${data.roster[2]}</li>
+                                    <li>${data.roster[3]}</li>
                                 </ul>
                             </td>
                             <td><span class="status-pill ${statusClass}">${data.status || 'Pending'}</span></td>
@@ -169,39 +206,106 @@
             await updateDoc(doc(db, "teams", id), { status: newStatus });
         };
 
-        // --- PREVIOUS CMS LOGIC (MINIFIED FOR SPACE) ---
-        // Streams
+
+        // --- 2. RESTORED STREAM CMS LOGIC ---
         document.getElementById('saveStreamBtn').addEventListener('click', async () => {
-            const tA = document.getElementById('bcTeamA').value; const tB = document.getElementById('bcTeamB').value; const sLink = document.getElementById('bcStreamLink').value;
-            if(!tA || !tB || !sLink) return;
-            await addDoc(collection(db, "streams"), { teamA: tA, teamB: tB, streamUrl: sLink, isHidden: false, createdAt: new Date().toISOString() });
-            document.getElementById('bcTeamA').value = ''; document.getElementById('bcTeamB').value = ''; document.getElementById('bcStreamLink').value = '';
+            const tA = document.getElementById('bcTeamA').value;
+            const tB = document.getElementById('bcTeamB').value;
+            const sLink = document.getElementById('bcStreamLink').value;
+            const msg = document.getElementById('bcMessage');
+            
+            if(!tA || !tB || !sLink) { msg.style.color="red"; msg.innerText="All fields required."; return; }
+            
+            try {
+                await addDoc(collection(db, "streams"), { teamA: tA, teamB: tB, streamUrl: sLink, isHidden: false, createdAt: new Date().toISOString() });
+                msg.style.color = "var(--lvlup-accent)"; msg.innerText = "Stream Pushed to Network!";
+                document.getElementById('bcTeamA').value = ''; document.getElementById('bcTeamB').value = ''; document.getElementById('bcStreamLink').value = '';
+                setTimeout(() => msg.innerText = "", 3000);
+            } catch (e) { msg.style.color = "red"; msg.innerText = "Error: " + e.message; }
         });
+
         function loadStreams() {
             onSnapshot(query(collection(db, "streams"), orderBy("createdAt", "desc")), (snapshot) => {
                 const tbody = document.getElementById('streamTableBody'); tbody.innerHTML = "";
-                snapshot.forEach(d => {
-                    tbody.innerHTML += `<tr><td>${d.data().teamA} vs ${d.data().teamB}</td><td>${d.data().isHidden ? 'Hidden' : 'Public'}</td><td><button onclick="delStream('${d.id}')">Del</button></td></tr>`;
+                snapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    tbody.innerHTML += `
+                        <tr>
+                            <td><strong>${data.teamA} vs ${data.teamB}</strong></td>
+                            <td>${data.isHidden ? "<span style='color:red;'>Hidden</span>" : "<span style='color:#00ffcc;'>Public</span>"}</td>
+                            <td>
+                                <button class="btn-secondary" onclick="toggleStreamVis('${docSnap.id}', ${data.isHidden})">${data.isHidden ? "Unhide" : "Hide"}</button>
+                                <button class="btn-danger" onclick="delStream('${docSnap.id}')">Purge</button>
+                            </td>
+                        </tr>
+                    `;
                 });
             });
         }
-        window.delStream = async (id) => { if(confirm("Delete stream?")) await deleteDoc(doc(db, "streams", id)); };
+        window.toggleStreamVis = async (id, isHidden) => await updateDoc(doc(db, "streams", id), { isHidden: !isHidden });
+        window.delStream = async (id) => { if(confirm("Permanently delete stream?")) await deleteDoc(doc(db, "streams", id)); }
 
-        // Tournaments
+
+        // --- 3. RESTORED TOURNAMENT CMS LOGIC ---
         document.getElementById('saveTournamentBtn').addEventListener('click', async () => {
-            const title = document.getElementById('tTitle').value; const date = document.getElementById('tDate').value; const prize = document.getElementById('tPrize').value; const status = document.getElementById('tStatus').value; const desc = document.getElementById('tDesc').value;
-            await addDoc(collection(db, "tournaments"), { title, date, prizePool: prize, status, description: desc, isHidden: false, createdAt: new Date().toISOString() });
-            document.getElementById('tTitle').value = ''; document.getElementById('tDate').value = '';
+            const id = document.getElementById('tId').value; const title = document.getElementById('tTitle').value; const date = document.getElementById('tDate').value; const prize = document.getElementById('tPrize').value; const status = document.getElementById('tStatus').value; const desc = document.getElementById('tDesc').value; const msg = document.getElementById('tMessage');
+            if (!title || !date) { msg.style.color = "red"; msg.innerText = "Title and Date required."; return; }
+            msg.style.color = "var(--lvlup-accent)"; msg.innerText = "Processing...";
+            try {
+                if (isEditMode) {
+                    await updateDoc(doc(db, "tournaments", id), { title, date, prizePool: prize, status, description: desc });
+                    msg.innerText = "Event Updated!"; exitEditMode();
+                } else {
+                    await addDoc(collection(db, "tournaments"), { title, date, prizePool: prize, status, description: desc, isHidden: false, createdAt: new Date().toISOString() });
+                    msg.innerText = "Event Deployed!"; clearForm();
+                }
+                setTimeout(() => msg.innerText = "", 3000);
+            } catch (e) { msg.style.color = "red"; msg.innerText = "Error: " + e.message; }
         });
+
         function loadTournaments() {
             onSnapshot(query(collection(db, "tournaments"), orderBy("createdAt", "desc")), (snapshot) => {
                 const tbody = document.getElementById('tourneyTableBody'); tbody.innerHTML = "";
-                snapshot.forEach(d => {
-                    tbody.innerHTML += `<tr><td>${d.data().title}</td><td>${d.data().status}</td><td><button onclick="delT('${d.id}')">Del</button></td></tr>`;
+                snapshot.forEach((docSnap) => {
+                    const data = docSnap.data(); const id = docSnap.id;
+                    tbody.innerHTML += `
+                        <tr>
+                            <td><strong>${data.title}</strong><br><span style="font-size: 11px;">${data.date}</span></td>
+                            <td>${data.status}</td>
+                            <td>${data.isHidden ? "<span style='color:red;'>Hidden</span>" : "<span style='color:#00ffcc;'>Public</span>"}</td>
+                            <td>
+                                <button class="btn-action" onclick="editEvent('${id}', '${data.title.replace(/'/g, "\\'")}', '${data.date}', '${data.prizePool || ''}', '${data.status}', '${(data.description || '').replace(/'/g, "\\'").replace(/\n/g, "\\n")}')">Edit</button>
+                                <button class="btn-secondary" onclick="toggleVis('${id}', ${data.isHidden})">${data.isHidden ? "Unhide" : "Hide"}</button>
+                                <button class="btn-danger" onclick="delEvent('${id}')">Purge</button>
+                            </td>
+                        </tr>
+                    `;
                 });
             });
         }
-        window.delT = async (id) => { if(confirm("Delete event?")) await deleteDoc(doc(db, "tournaments", id)); };
+
+        window.editEvent = (id, title, date, prize, status, desc) => {
+            isEditMode = true; document.getElementById('formTitle').innerText = "Update Event Data"; document.getElementById('formTitle').style.color = "var(--lvlup-edit)"; document.getElementById('saveTournamentBtn').innerText = "Submit Update"; document.getElementById('saveTournamentBtn').classList.add("btn-edit-mode"); document.getElementById('cancelEditBtn').style.display = "block";
+            document.getElementById('tId').value = id; document.getElementById('tTitle').value = title; document.getElementById('tDate').value = date; document.getElementById('tPrize').value = prize; document.getElementById('tStatus').value = status; document.getElementById('tDesc').value = desc; window.scrollTo(0, 0);
+        }
+        document.getElementById('cancelEditBtn').addEventListener('click', exitEditMode);
+        function exitEditMode() {
+            isEditMode = false; document.getElementById('formTitle').innerText = "Deploy Tournament"; document.getElementById('formTitle').style.color = "var(--lvlup-accent)"; document.getElementById('saveTournamentBtn').innerText = "Initialize Event"; document.getElementById('saveTournamentBtn').classList.remove("btn-edit-mode"); document.getElementById('cancelEditBtn').style.display = "none"; clearForm();
+        }
+        function clearForm() {
+            document.getElementById('tId').value = ''; document.getElementById('tTitle').value = ''; document.getElementById('tDate').value = ''; document.getElementById('tPrize').value = ''; document.getElementById('tDesc').value = '';
+        }
+        window.toggleVis = async (id, isHidden) => await updateDoc(doc(db, "tournaments", id), { isHidden: !isHidden });
+        window.delEvent = async (id) => { if(confirm("Permanently delete?")) await deleteDoc(doc(db, "tournaments", id)); }
+
+        // --- 4. RESTORED USER AUDIT LOGIC ---
+        async function loadUsers() {
+            const tbody = document.getElementById('userTableBody'); tbody.innerHTML = "";
+            (await getDocs(collection(db, "users"))).forEach(d => {
+                tbody.innerHTML += `<tr><td><strong>${d.data().name}</strong><br><span style="font-size:11px;">${d.data().email}</span></td><td>${d.data().role}</td><td><button class="btn-danger" onclick="delUser('${d.id}')">Purge</button></td></tr>`;
+            });
+        }
+        window.delUser = async (id) => { if(confirm("Purge user?")) { await deleteDoc(doc(db, "users", id)); loadUsers(); } }
     </script>
 </body>
 </html>
