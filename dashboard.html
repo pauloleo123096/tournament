@@ -5,14 +5,48 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LVLUP | Captain's Dashboard</title>
     <style>
-        :root { --bg: #0a0f16; --panel: #131c28; --accent: #00ffcc; --text: #f8fafc; --muted: #64748b; }
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--text); margin: 0; }
-        nav { background: #05080c; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); }
-        .logo { font-size: 24px; font-weight: bold; color: var(--accent); text-decoration: none; letter-spacing: 2px; }
+        :root { 
+            --lvlup-bg: #0a0f16; --lvlup-panel: #131c28; 
+            --lvlup-accent: #00ffcc; --lvlup-text: #f8fafc; 
+            --lvlup-text-muted: #64748b; --lvlup-pending: #f59e0b; --lvlup-approved: #10b981; --lvlup-danger: #ef4444;
+        }
+
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--lvlup-bg); color: var(--lvlup-text); margin: 0; }
+        
+        /* Navbar */
+        nav { background: #05080c; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--lvlup-accent); }
+        .logo { font-size: 24px; font-weight: bold; color: var(--lvlup-accent); text-decoration: none; letter-spacing: 2px; }
         .btn-logout { background: transparent; border: 1px solid #ef4444; color: #ef4444; padding: 8px 16px; border-radius: 4px; cursor: pointer; transition: 0.2s; font-weight: bold;}
         .btn-logout:hover { background: #ef4444; color: white; }
-        .container { max-width: 1000px; margin: 40px auto; padding: 0 20px; display: none; } /* Hidden until auth check */
-        .panel { background: var(--panel); padding: 30px; border-radius: 12px; border: 1px solid #1e293b; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        
+        .container { max-width: 1000px; margin: 40px auto; padding: 0 20px; display: none; }
+        
+        .header-panel { background: var(--lvlup-panel); padding: 30px; border-radius: 12px; border: 1px solid #1e293b; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;}
+        .header-panel h1 { margin: 0; color: var(--lvlup-accent); }
+
+        /* Squad Grid */
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .squad-card { background: var(--lvlup-panel); border-radius: 12px; border: 1px solid #1e293b; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); transition: transform 0.2s; }
+        .squad-card:hover { transform: translateY(-3px); border-color: var(--lvlup-text-muted); }
+        
+        .squad-header { border-bottom: 1px solid #1e293b; padding-bottom: 10px; margin-bottom: 15px; }
+        .squad-header h3 { margin: 0 0 5px 0; font-size: 22px; color: var(--lvlup-text); }
+        .event-name { font-size: 13px; color: var(--lvlup-accent); text-transform: uppercase; letter-spacing: 1px; }
+        
+        .roster-list { margin: 0; padding: 0; list-style: none; color: #cbd5e1; font-size: 15px; margin-bottom: 20px;}
+        .roster-list li { margin-bottom: 5px; }
+        .roster-list span { color: var(--lvlup-text-muted); font-size: 12px; margin-right: 8px; }
+
+        /* Status Badges */
+        .status-badge { display: inline-block; padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: bold; text-transform: uppercase; width: 100%; text-align: center; box-sizing: border-box;}
+        .status-pending { background: rgba(245, 158, 11, 0.1); color: var(--lvlup-pending); border: 1px solid var(--lvlup-pending); }
+        .status-approved { background: rgba(16, 185, 129, 0.1); color: var(--lvlup-approved); border: 1px solid var(--lvlup-approved); }
+        .status-disqualified { background: rgba(239, 68, 68, 0.1); color: var(--lvlup-danger); border: 1px solid var(--lvlup-danger); }
+
+        .empty-state { text-align: center; padding: 60px 20px; background: var(--lvlup-panel); border-radius: 12px; border: 1px dashed #334155; grid-column: 1 / -1;}
+        .empty-state h2 { color: var(--lvlup-text-muted); }
+        .btn-primary { background: var(--lvlup-accent); color: #000; padding: 12px 24px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; margin-top: 15px; transition: 0.2s;}
+        .btn-primary:hover { background: #00ccaa; }
     </style>
 </head>
 <body>
@@ -20,43 +54,115 @@
     <nav>
         <a href="index.html" class="logo">LVLUP</a>
         <div style="display: flex; gap: 15px; align-items: center;">
-            <span id="userGreeting" style="color: var(--muted); font-weight: bold;"></span>
-            <a href="nexus-7x9q.html" id="adminLink" style="display: none; color: var(--accent); font-weight: bold; text-decoration: none;">Nexus Access</a>
+            <a href="index.html" style="color: var(--lvlup-text); font-weight: bold; text-decoration: none; margin-right: 15px;">Explore Tournaments</a>
+            <a href="nexus-7x9q.html" id="adminLink" style="display: none; color: var(--lvlup-accent); font-weight: bold; text-decoration: none; margin-right: 15px;">Nexus Access</a>
             <button class="btn-logout" id="logoutBtn">Disengage</button>
         </div>
     </nav>
 
     <div class="container" id="dashboardContent">
-        <div class="panel">
-            <h1 style="margin-top: 0; color: var(--accent);">Operational Hub</h1>
-            <p style="color: var(--muted);">Phase 3 Target: Team Management and Roster editing will be constructed here.</p>
+        <div class="header-panel">
+            <div>
+                <h1 id="userGreeting">Command Center</h1>
+                <p style="color: var(--lvlup-text-muted); margin: 5px 0 0 0;">Manage your active rosters and track tournament status.</p>
+            </div>
+        </div>
+
+        <div class="grid" id="squadGrid">
+            <p style="color: var(--lvlup-text-muted);">Decrypting roster data...</p>
         </div>
     </div>
 
     <script type="module">
         import { db, auth } from './firebase-setup.js';
         import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        // NEW IMPORTS: query, where, getDocs to fetch the user's specific teams
+        import { doc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                // Show content
                 document.getElementById('dashboardContent').style.display = "block";
                 
-                // Fetch profile data
-                const profile = await getDoc(doc(db, "users", user.uid));
-                if(profile.exists()) {
-                    const data = profile.data();
-                    document.getElementById('userGreeting').innerText = `Welcome, ${data.name}`;
-                    // If Admin, show the Nexus link
-                    if(data.role === "admin") { document.getElementById('adminLink').style.display = "inline-block"; }
-                }
+                // 1. Fetch Profile Data (for the greeting and Admin check)
+                try {
+                    const profile = await getDoc(doc(db, "users", user.uid));
+                    if(profile.exists()) {
+                        const data = profile.data();
+                        document.getElementById('userGreeting').innerText = `Welcome, Captain ${data.name}`;
+                        if(data.role === "admin") { document.getElementById('adminLink').style.display = "inline-block"; }
+                    }
+                } catch(e) { console.error("Profile load error:", e); }
+
+                // 2. Fetch User's Registered Teams
+                loadUserTeams(user.uid);
+
             } else {
-                // Kick to login
                 window.location.replace("login.html");
             }
         });
 
+        async function loadUserTeams(uid) {
+            const grid = document.getElementById('squadGrid');
+            try {
+                // Query: Only get teams where ownerUid matches the logged-in user
+                const q = query(collection(db, "teams"), where("ownerUid", "==", uid));
+                const querySnapshot = await getDocs(q);
+                
+                grid.innerHTML = "";
+
+                if (querySnapshot.empty) {
+                    grid.innerHTML = `
+                        <div class="empty-state">
+                            <h2>No Active Squads</h2>
+                            <p style="color: var(--lvlup-text-muted);">You haven't registered for any upcoming tournaments yet.</p>
+                            <a href="index.html" class="btn-primary">Find a Tournament</a>
+                        </div>
+                    `;
+                    return;
+                }
+
+                querySnapshot.forEach((docSnap) => {
+                    const team = docSnap.data();
+                    
+                    // Determine Status Badge Styling
+                    let statusClass = "status-pending";
+                    let statusText = team.status || "Pending Review";
+                    
+                    if (statusText.toLowerCase().includes("approved")) {
+                        statusClass = "status-approved";
+                    } else if (statusText.toLowerCase().includes("disqualified") || statusText.toLowerCase().includes("rejected")) {
+                        statusClass = "status-disqualified";
+                    }
+
+                    // Build the Card
+                    const card = `
+                        <div class="squad-card">
+                            <div class="squad-header">
+                                <h3>${team.teamName}</h3>
+                                <div class="event-name">Event: ${team.tournamentName || "General Registration"}</div>
+                            </div>
+                            
+                            <ul class="roster-list">
+                                <li><span>[CAPT]</span> ${team.captain}</li>
+                                <li><span>[PLYR]</span> ${team.roster[0]}</li>
+                                <li><span>[PLYR]</span> ${team.roster[1]}</li>
+                                <li><span>[PLYR]</span> ${team.roster[2]}</li>
+                                <li><span>[PLYR]</span> ${team.roster[3]}</li>
+                            </ul>
+                            
+                            <div class="status-badge ${statusClass}">Status: ${statusText}</div>
+                        </div>
+                    `;
+                    grid.innerHTML += card;
+                });
+
+            } catch (error) {
+                console.error("Error loading teams:", error);
+                grid.innerHTML = `<p style="color: #ef4444;">Error loading your squads. Please refresh the page.</p>`;
+            }
+        }
+
+        // Logout Logic
         document.getElementById('logoutBtn').addEventListener('click', () => {
             signOut(auth).then(() => window.location.replace("index.html"));
         });
