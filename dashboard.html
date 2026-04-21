@@ -13,7 +13,6 @@
 
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--lvlup-bg); color: var(--lvlup-text); margin: 0; }
         
-        /* Navbar */
         nav { background: #05080c; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--lvlup-accent); }
         .logo { font-size: 24px; font-weight: bold; color: var(--lvlup-accent); text-decoration: none; letter-spacing: 2px; }
         .btn-logout { background: transparent; border: 1px solid #ef4444; color: #ef4444; padding: 8px 16px; border-radius: 4px; cursor: pointer; transition: 0.2s; font-weight: bold;}
@@ -24,7 +23,6 @@
         .header-panel { background: var(--lvlup-panel); padding: 30px; border-radius: 12px; border: 1px solid #1e293b; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;}
         .header-panel h1 { margin: 0; color: var(--lvlup-accent); }
 
-        /* Squad Grid */
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
         .squad-card { background: var(--lvlup-panel); border-radius: 12px; border: 1px solid #1e293b; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); transition: transform 0.2s; }
         .squad-card:hover { transform: translateY(-3px); border-color: var(--lvlup-text-muted); }
@@ -37,7 +35,6 @@
         .roster-list li { margin-bottom: 5px; }
         .roster-list span { color: var(--lvlup-text-muted); font-size: 12px; margin-right: 8px; }
 
-        /* Status Badges */
         .status-badge { display: inline-block; padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: bold; text-transform: uppercase; width: 100%; text-align: center; box-sizing: border-box;}
         .status-pending { background: rgba(245, 158, 11, 0.1); color: var(--lvlup-pending); border: 1px solid var(--lvlup-pending); }
         .status-approved { background: rgba(16, 185, 129, 0.1); color: var(--lvlup-approved); border: 1px solid var(--lvlup-approved); }
@@ -47,6 +44,10 @@
         .empty-state h2 { color: var(--lvlup-text-muted); }
         .btn-primary { background: var(--lvlup-accent); color: #000; padding: 12px 24px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; margin-top: 15px; transition: 0.2s;}
         .btn-primary:hover { background: #00ccaa; }
+
+        /* NEW: Lockout UI Styling */
+        .lockout-panel { background: var(--lvlup-panel); padding: 60px 40px; border-radius: 12px; border: 1px solid #ef4444; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; max-width: 600px; margin: 80px auto; }
+        .lockout-panel h1 { color: #ef4444; margin-top: 0; font-size: 32px; letter-spacing: 2px;}
     </style>
 </head>
 <body>
@@ -59,6 +60,16 @@
             <button class="btn-logout" id="logoutBtn">Disengage</button>
         </div>
     </nav>
+
+    <div class="container" id="lockoutContent" style="display: none;">
+        <div class="lockout-panel">
+            <h1>SECURITY LOCK</h1>
+            <p style="color: var(--lvlup-text-muted); font-size: 18px; margin-bottom: 30px;">We require all Captains to verify their email address before accessing the command center or registering teams.</p>
+            <p id="lockoutMsg" style="color: var(--lvlup-accent); font-weight: bold; margin-bottom: 20px;"></p>
+            <button id="resendVerificationBtn" class="btn-primary" style="width: 100%;">Resend Verification Email</button>
+            <p style="margin-top: 25px; font-size: 14px; color: var(--lvlup-text-muted);">Already clicked the link in your email? <a href="dashboard.html" style="color: var(--lvlup-accent);">Refresh this page</a>.</p>
+        </div>
+    </div>
 
     <div class="container" id="dashboardContent">
         <div class="header-panel">
@@ -75,15 +86,25 @@
 
     <script type="module">
         import { db, auth } from './firebase-setup.js';
-        import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        // NEW IMPORTS: query, where, getDocs to fetch the user's specific teams
+        // NEW: Imported sendEmailVerification
+        import { onAuthStateChanged, signOut, sendEmailVerification } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { doc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        let currentUser = null;
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
+                currentUser = user;
+
+                // NEW: Security Intercept
+                if (!user.emailVerified) {
+                    document.getElementById('lockoutContent').style.display = "block";
+                    return; // Stop the code here! Don't load their data!
+                }
+
+                // If verified, proceed as normal
                 document.getElementById('dashboardContent').style.display = "block";
                 
-                // 1. Fetch Profile Data (for the greeting and Admin check)
                 try {
                     const profile = await getDoc(doc(db, "users", user.uid));
                     if(profile.exists()) {
@@ -93,7 +114,6 @@
                     }
                 } catch(e) { console.error("Profile load error:", e); }
 
-                // 2. Fetch User's Registered Teams
                 loadUserTeams(user.uid);
 
             } else {
@@ -101,10 +121,28 @@
             }
         });
 
+        // NEW: Resend Email Logic
+        document.getElementById('resendVerificationBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('resendVerificationBtn');
+            const msg = document.getElementById('lockoutMsg');
+            btn.disabled = true;
+            btn.innerText = "Sending...";
+            
+            try {
+                await sendEmailVerification(currentUser);
+                msg.innerText = "Verification email sent! Check your inbox/spam folder.";
+                btn.innerText = "Email Dispatched";
+            } catch (error) {
+                msg.style.color = "#ef4444";
+                msg.innerText = "Error: " + error.message;
+                btn.innerText = "Resend Verification Email";
+                btn.disabled = false;
+            }
+        });
+
         async function loadUserTeams(uid) {
             const grid = document.getElementById('squadGrid');
             try {
-                // Query: Only get teams where ownerUid matches the logged-in user
                 const q = query(collection(db, "teams"), where("ownerUid", "==", uid));
                 const querySnapshot = await getDocs(q);
                 
@@ -123,8 +161,6 @@
 
                 querySnapshot.forEach((docSnap) => {
                     const team = docSnap.data();
-                    
-                    // Determine Status Badge Styling
                     let statusClass = "status-pending";
                     let statusText = team.status || "Pending Review";
                     
@@ -134,14 +170,12 @@
                         statusClass = "status-disqualified";
                     }
 
-                    // Build the Card
                     const card = `
                         <div class="squad-card">
                             <div class="squad-header">
                                 <h3>${team.teamName}</h3>
                                 <div class="event-name">Event: ${team.tournamentName || "General Registration"}</div>
                             </div>
-                            
                             <ul class="roster-list">
                                 <li><span>[CAPT]</span> ${team.captain}</li>
                                 <li><span>[PLYR]</span> ${team.roster[0]}</li>
@@ -149,7 +183,6 @@
                                 <li><span>[PLYR]</span> ${team.roster[2]}</li>
                                 <li><span>[PLYR]</span> ${team.roster[3]}</li>
                             </ul>
-                            
                             <div class="status-badge ${statusClass}">Status: ${statusText}</div>
                         </div>
                     `;
@@ -162,7 +195,6 @@
             }
         }
 
-        // Logout Logic
         document.getElementById('logoutBtn').addEventListener('click', () => {
             signOut(auth).then(() => window.location.replace("index.html"));
         });
