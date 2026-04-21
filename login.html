@@ -53,23 +53,27 @@
 
     <script type="module">
         import { db, auth } from './firebase-setup.js';
-        import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        // NEW: Imported sendEmailVerification
+        import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         const urlParams = new URLSearchParams(window.location.search);
         const urlId = urlParams.get('id');
 
-        // Prevent logged-in users from seeing login page (keeps their URL ID intact!)
         onAuthStateChanged(auth, (user) => { 
             if (user) {
-                window.location.replace(urlId ? `register.html?id=${urlId}` : "dashboard.html");
+                // NEW: If they aren't verified, force them to the dashboard lock screen
+                if (!user.emailVerified) {
+                    window.location.replace("dashboard.html");
+                } else {
+                    window.location.replace(urlId ? `register.html?id=${urlId}` : "dashboard.html");
+                }
             } 
         });
 
         let isLogin = true;
         const msg = document.getElementById('errMsg');
 
-        // UI Toggles
         document.getElementById('toggleLink').addEventListener('click', () => {
             isLogin = !isLogin;
             document.getElementById('formTitle').innerText = isLogin ? "Captain Login" : "Create Captain Account";
@@ -96,7 +100,6 @@
             msg.innerText = "";
         });
 
-        // Authentication Execution
         document.getElementById('authBtn').addEventListener('click', async () => {
             const email = document.getElementById('email').value;
             const pass = document.getElementById('password').value;
@@ -110,8 +113,12 @@
                 } else {
                     if (!name) { btnLoadingState(false); return msg.innerText = "Name is required for registration."; }
                     if (pass.length < 6) { btnLoadingState(false); return msg.innerText = "Password must be at least 6 characters."; }
+                    
                     const creds = await createUserWithEmailAndPassword(auth, email, pass);
                     await setDoc(doc(db, "users", creds.user.uid), { email, name, role: "captain", createdAt: new Date().toISOString() });
+                    
+                    // NEW: Fire off the verification email instantly
+                    await sendEmailVerification(creds.user);
                 }
             } catch (e) { 
                 btnLoadingState(false);
