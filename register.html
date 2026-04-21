@@ -15,96 +15,117 @@
         
         .form-container { max-width: 600px; margin: 0 auto; background: var(--lvlup-panel); padding: 40px; border-radius: 12px; border-top: 4px solid var(--lvlup-accent); box-shadow: 0 10px 25px rgba(0,0,0,0.5); display: none; }
         .form-container h2 { margin-top: 0; font-size: 32px; margin-bottom: 5px; }
-        .subtitle { color: var(--lvlup-text-muted); margin-bottom: 20px; font-size: 16px; }
+        .subtitle { color: var(--lvlup-text-muted); margin-bottom: 20px; font-size: 16px; line-height: 1.5; }
         
-        .target-banner { background: #0f172a; border-left: 4px solid var(--lvlup-accent); padding: 12px 15px; border-radius: 4px; margin-bottom: 30px; transition: 0.3s;}
-        .target-banner span { color: var(--lvlup-text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 3px; }
-        .target-banner strong { font-size: 18px; color: var(--lvlup-text); }
+        .target-banner { background: #0f172a; border-left: 4px solid var(--lvlup-accent); padding: 15px; border-radius: 4px; margin-bottom: 30px; transition: 0.3s;}
+        .target-banner span { color: var(--lvlup-text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 5px; }
+        .target-banner strong { font-size: 20px; color: var(--lvlup-text); }
 
         .input-group { margin-bottom: 20px; }
-        .input-group label { display: block; margin-bottom: 8px; color: #cbd5e1; font-weight: bold; }
+        .input-group label { display: block; margin-bottom: 4px; color: #cbd5e1; font-weight: bold; }
+        .input-group .helper-text { display: block; margin-bottom: 8px; font-size: 12px; color: var(--lvlup-text-muted); }
         .input-group input { width: 100%; padding: 12px; background: #0f172a; border: 1px solid #1e293b; color: white; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
         .input-group input:focus { outline: none; border-color: var(--lvlup-accent); }
         
         .roster-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         
-        .submit-btn { width: 100%; padding: 16px; background: var(--lvlup-accent); color: #000; border: none; border-radius: 6px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 20px; transition: 0.2s; }
+        .submit-btn { width: 100%; padding: 16px; background: var(--lvlup-accent); color: #000; border: none; border-radius: 6px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 30px; transition: 0.2s; }
         .submit-btn:hover { background: #00ccaa; }
         .submit-btn:disabled { background: #334155; color: #94a3b8; cursor: not-allowed; }
+        
+        .btn-outline { display: inline-block; padding: 10px 20px; border: 1px solid var(--lvlup-accent); color: var(--lvlup-accent); text-decoration: none; border-radius: 6px; font-weight: bold; margin-top: 15px; transition: 0.2s; }
+        .btn-outline:hover { background: var(--lvlup-accent); color: #000; }
     </style>
 </head>
 <body>
 
     <div class="form-container" id="registrationForm">
-        <h2>Enroll Squad</h2>
-        <div class="subtitle">Enter your official MLBB roster details below.</div>
-
+        
         <div class="target-banner" id="targetBanner">
-            <span>Registering For:</span>
+            <span>Currently Enrolling For:</span>
             <strong id="targetEventName">Loading Event Data...</strong>
         </div>
 
-        <div class="input-group">
-            <label>Team Name</label>
-            <input type="text" id="teamName" placeholder="e.g. Blacklist International">
-        </div>
+        <div id="formBody">
+            <h2>Squad Registration</h2>
+            <div class="subtitle">You are logged in as a Captain. Fill out your official MLBB roster below to officially submit your team for this tournament.</div>
 
-        <div class="input-group">
-            <label>Captain IGN (In-Game Name)</label>
-            <input type="text" id="captainIGN" placeholder="Player 1 (Captain)">
-        </div>
+            <div class="input-group" style="margin-top: 30px;">
+                <label>Official Team Name</label>
+                <span class="helper-text">This will be displayed on the brackets and live stream.</span>
+                <input type="text" id="teamName" placeholder="e.g. Blacklist International">
+            </div>
 
-        <label style="display: block; margin-bottom: 8px; color: #cbd5e1; font-weight: bold; margin-top: 30px;">Starting Roster</label>
-        <div class="roster-grid">
-            <div class="input-group"><input type="text" id="player2" placeholder="Player 2 IGN"></div>
-            <div class="input-group"><input type="text" id="player3" placeholder="Player 3 IGN"></div>
-            <div class="input-group"><input type="text" id="player4" placeholder="Player 4 IGN"></div>
-            <div class="input-group"><input type="text" id="player5" placeholder="Player 5 IGN"></div>
-        </div>
+            <label style="display: block; margin-bottom: 4px; color: #cbd5e1; font-weight: bold; margin-top: 30px;">Starting Roster (In-Game Names)</label>
+            <span class="helper-text" style="display:block; margin-bottom: 15px; font-size: 12px; color: var(--lvlup-accent);">⚠️ CRITICAL: Names must match exactly as they appear in Mobile Legends. Mismatched IGNs may result in disqualification.</span>
+            
+            <div class="input-group">
+                <input type="text" id="captainIGN" placeholder="Player 1 (Captain IGN)">
+            </div>
+            <div class="roster-grid">
+                <div class="input-group"><input type="text" id="player2" placeholder="Player 2 IGN"></div>
+                <div class="input-group"><input type="text" id="player3" placeholder="Player 3 IGN"></div>
+                <div class="input-group"><input type="text" id="player4" placeholder="Player 4 IGN"></div>
+                <div class="input-group"><input type="text" id="player5" placeholder="Player 5 IGN"></div>
+            </div>
 
-        <button id="submitTeamBtn" class="submit-btn" disabled>Awaiting Network...</button>
+            <button id="submitTeamBtn" class="submit-btn" disabled>Awaiting Network...</button>
+        </div>
+        
         <a href="dashboard.html" style="display: block; text-align: center; color: var(--lvlup-text-muted); text-decoration: none; margin-top: 20px; font-size: 14px;">Cancel & Return to Dashboard</a>
     </div>
 
     <script type="module">
         import { db, auth } from './firebase-setup.js';
-        // UPGRADED IMPORTS: Added query, where, and getDocs for duplicate checking
         import { collection, addDoc, doc, getDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
         let currentUserId = null;
-        let targetTourneyId = "general";
-        let targetTourneyName = "General Open Roster";
+        let targetTourneyId = null;
+        let targetTourneyName = "";
         const btn = document.getElementById('submitTeamBtn');
+        const formBody = document.getElementById('formBody');
 
         const urlParams = new URLSearchParams(window.location.search);
         const urlId = urlParams.get('id');
 
-        // DEFENSE 1: Ghost Link Validation
+        // STRICT EVENT LOCKOUT
         async function fetchTargetTournament() {
-            if (urlId) {
-                targetTourneyId = urlId;
-                try {
-                    const tSnap = await getDoc(doc(db, "tournaments", urlId));
-                    if (tSnap.exists()) {
-                        targetTourneyName = tSnap.data().title;
-                        btn.innerText = "Submit Registration";
-                        btn.disabled = false;
-                    } else {
-                        targetTourneyName = "INVALID EVENT ID";
-                        document.getElementById('targetBanner').style.borderLeftColor = "var(--lvlup-danger)";
-                        document.getElementById('targetBanner').style.color = "var(--lvlup-danger)";
-                        btn.innerText = "Event Not Found";
-                    }
-                } catch (e) {
-                    targetTourneyName = "Network Error";
-                    btn.innerText = "Connection Failed";
-                }
-            } else {
-                btn.innerText = "Submit Registration";
-                btn.disabled = false;
+            if (!urlId) {
+                // If there is no ID, hide the form and show the error block
+                formBody.style.display = 'none';
+                document.getElementById('targetBanner').style.borderLeftColor = "var(--lvlup-danger)";
+                document.getElementById('targetBanner').innerHTML = `
+                    <strong style="color: var(--lvlup-danger); font-size: 24px;">No Tournament Selected</strong>
+                    <p style="color: var(--lvlup-text-muted); margin-top: 10px; font-size: 16px;">Team registration is currently only available for active events. You cannot register a general roster at this time.</p>
+                    <p style="color: var(--lvlup-text-muted); font-size: 16px;">Please return to the Home page, select a specific tournament, and click "Register" from there.</p>
+                    <a href="index.html" class="btn-outline">Browse Tournaments</a>
+                `;
+                return;
             }
-            document.getElementById('targetEventName').innerText = targetTourneyName;
+
+            targetTourneyId = urlId;
+            try {
+                const tSnap = await getDoc(doc(db, "tournaments", urlId));
+                if (tSnap.exists()) {
+                    targetTourneyName = tSnap.data().title;
+                    btn.innerText = "Submit Roster to Tournament";
+                    btn.disabled = false;
+                    document.getElementById('targetEventName').innerText = targetTourneyName;
+                } else {
+                    // ID exists in URL, but it's fake/deleted
+                    formBody.style.display = 'none';
+                    document.getElementById('targetBanner').style.borderLeftColor = "var(--lvlup-danger)";
+                    document.getElementById('targetBanner').innerHTML = `
+                        <strong style="color: var(--lvlup-danger); font-size: 24px;">Invalid Event Entry</strong>
+                        <p style="color: var(--lvlup-text-muted); margin-top: 10px; font-size: 16px;">The tournament you are trying to register for has been removed or does not exist.</p>
+                        <a href="index.html" class="btn-outline">Find an Active Event</a>
+                    `;
+                }
+            } catch (e) {
+                document.getElementById('targetEventName').innerText = "Network Error - Please Refresh";
+                btn.innerText = "Connection Failed";
+            }
         }
 
         onAuthStateChanged(auth, (user) => {
@@ -126,7 +147,6 @@
             const p4 = document.getElementById('player4').value.trim();
             const p5 = document.getElementById('player5').value.trim();
             
-            // DEFENSE 2: Incomplete Roster & Bad Data Check
             if (!tName || !capIGN || !p2 || !p3 || !p4 || !p5) {
                 alert("ACCESS DENIED: All 5 player IGNs and the Team Name are required.");
                 return;
@@ -140,7 +160,6 @@
             btn.disabled = true;
 
             try {
-                // DEFENSE 3: Spam & Duplicate Filter
                 const duplicateQuery = query(
                     collection(db, "teams"), 
                     where("ownerUid", "==", currentUserId), 
@@ -150,12 +169,11 @@
                 
                 if (!dupSnap.empty) {
                     alert("DUPLICATE DETECTED: You have already registered a squad for this specific tournament.");
-                    btn.innerText = "Submit Registration";
+                    btn.innerText = "Submit Roster to Tournament";
                     btn.disabled = false;
                     return;
                 }
 
-                // If all defenses pass, save to database
                 await addDoc(collection(db, "teams"), {
                     ownerUid: currentUserId, 
                     tournamentId: targetTourneyId,
@@ -174,7 +192,7 @@
                 
             } catch (error) {
                 alert("DATABASE ERROR: " + error.message);
-                btn.innerText = "Submit Registration";
+                btn.innerText = "Submit Roster to Tournament";
                 btn.disabled = false;
             }
         });
