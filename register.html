@@ -127,12 +127,7 @@
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // NEW: Security Intercept
-                if (!user.emailVerified) {
-                    window.location.replace("dashboard.html"); // Bounces them back to the lockout screen
-                    return;
-                }
-                
+                // REMOVED the email verification lockout! Both Google Auth and Manual users can pass freely now.
                 currentUserId = user.uid;
                 document.getElementById('registrationForm').style.display = "block";
                 fetchTargetTournament();
