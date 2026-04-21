@@ -6,44 +6,75 @@
     <title>LVLUP | Captain's Portal</title>
     <style>
         :root { --bg: #0a0f16; --panel: #131c28; --accent: #00ffcc; --text: #f8fafc; --muted: #64748b; }
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; justify-content: center; align-items: center; margin: 0; padding: 20px; box-sizing: border-box;}
-        .auth-box { background: var(--panel); padding: 40px; border-radius: 12px; border: 1px solid #1e293b; width: 100%; max-width: 450px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; }
-        h2 { margin-top: 0; color: var(--accent); margin-bottom: 5px; font-size: 28px;}
-        .helper-text { color: var(--muted); font-size: 15px; margin-bottom: 40px; line-height: 1.5; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; justify-content: center; align-items: center; margin: 0; padding: 40px 20px; box-sizing: border-box;}
+        .auth-box { background: var(--panel); padding: 40px; border-radius: 12px; border: 1px solid #1e293b; width: 100%; max-width: 450px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h2 { margin-top: 0; color: var(--accent); text-align: center; margin-bottom: 5px;}
+        .helper-text { text-align: center; color: var(--muted); font-size: 14px; margin-bottom: 30px; line-height: 1.5; }
         
         /* Premium Google Button */
-        .btn-google { width: 100%; padding: 15px; background: white; color: #000; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px;}
+        .btn-google { width: 100%; padding: 12px; background: white; color: #000; border: none; border-radius: 6px; font-weight: bold; font-size: 15px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px;}
         .btn-google:hover { background: #f1f5f9; transform: translateY(-2px); }
-        .btn-google img { width: 20px; height: 20px; }
+        .btn-google img { width: 18px; height: 18px; }
+
+        .divider { text-align: center; color: var(--muted); font-size: 12px; letter-spacing: 1px; margin: 25px 0; border-bottom: 1px solid #1e293b; line-height: 0.1em; }
+        .divider span { background: var(--panel); padding: 0 10px; }
         
-        .back-link { display: block; margin-top: 25px; color: var(--muted); text-decoration: none; font-size: 14px;}
-        .back-link:hover { color: var(--accent); }
+        /* Manual Form Inputs */
+        input { width: 100%; padding: 12px; margin-bottom: 20px; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 6px; box-sizing: border-box;}
+        button.btn-primary { width: 100%; padding: 12px; background: var(--accent); color: #000; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; margin-bottom: 15px;}
+        button.btn-primary:hover { background: #00ccaa; }
+        
+        .toggle-text { text-align: center; color: var(--muted); font-size: 14px; padding-top: 15px; border-top: 1px solid #1e293b; margin-top: 10px;}
+        .toggle-text a { color: var(--accent); cursor: pointer; text-decoration: none; font-weight: bold;}
+        .back-link { display: block; text-align: center; margin-top: 25px; color: var(--muted); text-decoration: none; font-size: 14px;}
+        .hidden { display: none; }
     </style>
 </head>
 <body>
 
     <div class="auth-box">
-        <h2 id="formTitle">Captain's Portal</h2>
-        <div class="helper-text">Authenticate your identity to manage active MLBB rosters and access the tournament network.</div>
-        
-        <button id="googleLoginBtn" class="btn-google">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="20px" height="20px">
-                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-            </svg>
-            Continue with Google
-        </button>
+        <div id="mainForm">
+            <h2 id="formTitle">Captain Login</h2>
+            <div class="helper-text" id="formSubtitle">Log in to manage your active MLBB rosters, track tournament statuses, and edit your squads.</div>
+            
+            <button id="googleLoginBtn" class="btn-google">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="18px" height="18px">
+                    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                </svg>
+                Continue with Google
+            </button>
 
-        <div id="errMsg" style="color: #ef4444; margin-top: 15px; font-size: 14px; font-weight:bold;"></div>
+            <div class="divider"><span>OR</span></div>
+            
+            <input type="text" id="name" placeholder="Your Full Name (or Captain Alias)" class="hidden">
+            <input type="email" id="email" placeholder="Email Address">
+            <input type="password" id="password" placeholder="Password (Minimum 6 characters)">
+            <button id="authBtn" class="btn-primary">Secure Login</button>
+            
+            <div class="toggle-text">
+                <span id="toggleHint">Don't have a Captain Account yet?</span> <br><a id="toggleLink" style="display:inline-block; margin-top:5px;">Create an Account Manually</a><br><br>
+                <a id="forgotLink" style="font-size: 13px; color: var(--muted); text-decoration: underline;">Forgot Password?</a>
+            </div>
+        </div>
+
+        <div id="resetForm" class="hidden">
+            <h2>Reset Protocol</h2>
+            <div class="helper-text">Enter your email address and we will send you a secure link to reset your Captain's password.</div>
+            <input type="email" id="resetEmail" placeholder="Account Email Address">
+            <button id="sendResetBtn" class="btn-primary">Send Recovery Link</button>
+            <div class="toggle-text" style="border:none;"><a id="backToLogin">← Return to Login</a></div>
+        </div>
+
+        <div id="errMsg" style="color: #ef4444; margin-top: 15px; text-align: center; font-size: 14px; font-weight:bold;"></div>
         <a href="index.html" class="back-link">Return to Home Base</a>
     </div>
 
     <script type="module">
         import { db, auth } from './firebase-setup.js';
-        // NEW: Imported GoogleAuthProvider and signInWithPopup
-        import { GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -51,40 +82,101 @@
 
         onAuthStateChanged(auth, (user) => { 
             if (user) {
-                // Instantly redirects logged-in users to the right place
                 window.location.replace(urlId ? `register.html?id=${urlId}` : "dashboard.html");
             } 
         });
 
-        const provider = new GoogleAuthProvider();
+        let isLogin = true;
         const msg = document.getElementById('errMsg');
-        const btn = document.getElementById('googleLoginBtn');
 
-        btn.addEventListener('click', async () => {
-            btn.disabled = true;
-            btn.style.opacity = "0.7";
+        // UI Toggles
+        document.getElementById('toggleLink').addEventListener('click', () => {
+            isLogin = !isLogin;
+            document.getElementById('formTitle').innerText = isLogin ? "Captain Login" : "Create Captain Account";
+            document.getElementById('formSubtitle').innerText = isLogin 
+                ? "Log in to manage your active MLBB rosters, track tournament statuses, and edit your squads." 
+                : "Step 1: Create your account. Step 2: Enroll your squad. You must be a registered Captain to enter tournaments.";
+            document.getElementById('authBtn').innerText = isLogin ? "Secure Login" : "Create Captain Account";
+            document.getElementById('name').classList.toggle('hidden', isLogin);
+            document.getElementById('toggleHint').innerText = isLogin ? "Don't have a Captain Account yet?" : "Already have a Captain Account?";
+            document.getElementById('toggleLink').innerText = isLogin ? "Create an Account Manually" : "Log in to your Account";
+            document.getElementById('forgotLink').classList.toggle('hidden', !isLogin);
             msg.innerText = "";
+        });
+
+        document.getElementById('forgotLink').addEventListener('click', () => {
+            document.getElementById('mainForm').classList.add('hidden');
+            document.getElementById('resetForm').classList.remove('hidden');
+            msg.innerText = "";
+        });
+
+        document.getElementById('backToLogin').addEventListener('click', () => {
+            document.getElementById('resetForm').classList.add('hidden');
+            document.getElementById('mainForm').classList.remove('hidden');
+            msg.innerText = "";
+        });
+
+        // --- GOOGLE AUTHENTICATION ---
+        const provider = new GoogleAuthProvider();
+        document.getElementById('googleLoginBtn').addEventListener('click', async () => {
+            const googleBtn = document.getElementById('googleLoginBtn');
+            googleBtn.disabled = true; googleBtn.style.opacity = "0.7"; msg.innerText = "";
 
             try {
-                // 1. Launch Google Login Popup
                 const result = await signInWithPopup(auth, provider);
                 const user = result.user;
-
-                // 2. Save or update their profile in your database
-                // { merge: true } ensures we don't accidentally overwrite an Admin's role if they log in!
                 await setDoc(doc(db, "users", user.uid), { 
                     email: user.email, 
                     name: user.displayName || "Captain", 
-                    role: "captain", // By default, everyone is a captain. {merge: true} protects your admin status.
+                    role: "captain", 
                     lastLogin: new Date().toISOString()
                 }, { merge: true });
-
             } catch (e) { 
-                btn.disabled = false;
-                btn.style.opacity = "1";
+                googleBtn.disabled = false; googleBtn.style.opacity = "1";
+                msg.innerText = "Google Error: " + e.message.replace("Firebase: ", ""); 
+            }
+        });
+
+        // --- MANUAL AUTHENTICATION ---
+        document.getElementById('authBtn').addEventListener('click', async () => {
+            const email = document.getElementById('email').value;
+            const pass = document.getElementById('password').value;
+            const name = document.getElementById('name').value;
+            if (!email || !pass) return msg.innerText = "Please provide your credentials.";
+
+            btnLoadingState(true);
+            try {
+                if (isLogin) {
+                    await signInWithEmailAndPassword(auth, email, pass);
+                } else {
+                    if (!name) { btnLoadingState(false); return msg.innerText = "Name is required for registration."; }
+                    if (pass.length < 6) { btnLoadingState(false); return msg.innerText = "Password must be at least 6 characters."; }
+                    const creds = await createUserWithEmailAndPassword(auth, email, pass);
+                    await setDoc(doc(db, "users", creds.user.uid), { email, name, role: "captain", createdAt: new Date().toISOString() });
+                    await sendEmailVerification(creds.user);
+                }
+            } catch (e) { 
+                btnLoadingState(false);
                 msg.innerText = "Error: " + e.message.replace("Firebase: ", ""); 
             }
         });
+
+        document.getElementById('sendResetBtn').addEventListener('click', async () => {
+            const email = document.getElementById('resetEmail').value;
+            if(!email) return msg.innerText = "Provide an email address.";
+            try {
+                await sendPasswordResetEmail(auth, email);
+                msg.style.color = "var(--accent)";
+                msg.innerText = "Recovery email sent. Check your inbox.";
+            } catch(e) { msg.style.color = "#ef4444"; msg.innerText = "Error: " + e.message; }
+        });
+
+        function btnLoadingState(isLoading) {
+            const authBtn = document.getElementById('authBtn');
+            authBtn.disabled = isLoading;
+            authBtn.innerText = isLoading ? "Authenticating..." : (isLogin ? "Secure Login" : "Create Captain Account");
+            authBtn.style.opacity = isLoading ? "0.7" : "1";
+        }
     </script>
 </body>
 </html>
