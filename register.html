@@ -83,20 +83,27 @@
         let currentUserId = null;
         let targetTourneyId = null;
         let targetTourneyName = "";
+        
+        // DOM Elements
         const btn = document.getElementById('submitTeamBtn');
         const formBody = document.getElementById('formBody');
 
+        // Extract the tournament ID from the URL string
         const urlParams = new URLSearchParams(window.location.search);
         const urlId = urlParams.get('id');
 
+        // ==========================================
+        // SECURITY: TOURNAMENT VALIDATION
+        // ==========================================
+        // This function ensures a user cannot register without a valid tournament ID.
         async function fetchTargetTournament() {
             if (!urlId) {
+                // Failsafe: No ID present. Hide the form entirely to prevent orphaned data.
                 formBody.style.display = 'none';
                 document.getElementById('targetBanner').style.borderLeftColor = "var(--lvlup-danger)";
                 document.getElementById('targetBanner').innerHTML = `
                     <strong style="color: var(--lvlup-danger); font-size: 24px;">No Tournament Selected</strong>
-                    <p style="color: var(--lvlup-text-muted); margin-top: 10px; font-size: 16px;">Team registration is currently only available for active events. You cannot register a general roster at this time.</p>
-                    <p style="color: var(--lvlup-text-muted); font-size: 16px;">Please return to the Home page, select a specific tournament, and click "Register" from there.</p>
+                    <p style="color: var(--lvlup-text-muted); margin-top: 10px; font-size: 16px;">Team registration is currently only available for active events.</p>
                     <a href="index.html" class="btn-outline">Browse Tournaments</a>
                 `;
                 return;
@@ -104,6 +111,7 @@
 
             targetTourneyId = urlId;
             try {
+                // Fetch the tournament from Firebase to verify it actually exists
                 const tSnap = await getDoc(doc(db, "tournaments", urlId));
                 if (tSnap.exists()) {
                     targetTourneyName = tSnap.data().title;
@@ -111,6 +119,7 @@
                     btn.disabled = false;
                     document.getElementById('targetEventName').innerText = targetTourneyName;
                 } else {
+                    // Failsafe: ID exists in URL, but the tournament was deleted or is fake.
                     formBody.style.display = 'none';
                     document.getElementById('targetBanner').style.borderLeftColor = "var(--lvlup-danger)";
                     document.getElementById('targetBanner').innerHTML = `
@@ -125,18 +134,32 @@
             }
         }
 
+        // ==========================================
+        // AUTHENTICATION CHECK
+        // ==========================================
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // REMOVED the email verification lockout! Both Google Auth and Manual users can pass freely now.
                 currentUserId = user.uid;
                 document.getElementById('registrationForm').style.display = "block";
                 fetchTargetTournament();
             } else {
+                // If not logged in, redirect to login page but KEEP the URL ID parameter so they don't lose their place!
                 const redirectParams = urlId ? `?id=${urlId}` : '';
                 window.location.href = `login.html${redirectParams}`;
             }
         });
 
+        // ==========================================
+        // DATA SANITIZATION HELPER (BUG PATCH #3)
+        // ==========================================
+        // Strips all empty spaces from a string to verify it contains real letters/numbers.
+        const isValidString = (str) => {
+            return str.replace(/\s/g, '').length >= 3;
+        };
+
+        // ==========================================
+        // SUBMISSION & DUPLICATE CHECK
+        // ==========================================
         document.getElementById('submitTeamBtn').addEventListener('click', async () => {
             const tName = document.getElementById('teamName').value.trim();
             const capIGN = document.getElementById('captainIGN').value.trim();
@@ -145,19 +168,18 @@
             const p4 = document.getElementById('player4').value.trim();
             const p5 = document.getElementById('player5').value.trim();
             
-            if (!tName || !capIGN || !p2 || !p3 || !p4 || !p5) {
-                alert("ACCESS DENIED: All 5 player IGNs and the Team Name are required.");
-                return;
-            }
-            if (capIGN.length < 3 || p2.length < 3 || p3.length < 3 || p4.length < 3 || p5.length < 3) {
-                alert("ACCESS DENIED: All player IGNs must be at least 3 characters long.");
+            // 1. Whitespace & Length Validation Check
+            if (!isValidString(tName) || !isValidString(capIGN) || !isValidString(p2) || !isValidString(p3) || !isValidString(p4) || !isValidString(p5)) {
+                alert("ACCESS DENIED: All names must contain at least 3 valid characters (blank spaces do not count).");
                 return;
             }
 
+            // Lock UI to prevent spam clicking
             btn.innerText = "Encrypting Data...";
             btn.disabled = true;
 
             try {
+                // 2. Database Query: Check if this exact user already registered for this exact event
                 const duplicateQuery = query(
                     collection(db, "teams"), 
                     where("ownerUid", "==", currentUserId), 
@@ -165,6 +187,7 @@
                 );
                 const dupSnap = await getDocs(duplicateQuery);
                 
+                // If a document is found, bounce them.
                 if (!dupSnap.empty) {
                     alert("DUPLICATE DETECTED: You have already registered a squad for this specific tournament.");
                     btn.innerText = "Submit Roster to Tournament";
@@ -172,16 +195,17 @@
                     return;
                 }
 
+                // 3. Final Write: Save the clean, verified data to Firebase
                 await addDoc(collection(db, "teams"), {
                     ownerUid: currentUserId, 
                     tournamentId: targetTourneyId,
-                    tournamentName: targetTourneyName,
+                    tournamentName: targetTourneyName, // Stored to make dashboard rendering easier
                     teamName: tName,
                     captain: capIGN,
                     roster: [p2, p3, p4, p5],
                     wins: 0,
                     losses: 0,
-                    status: "Pending Review", 
+                    status: "Pending Review", // The default state. Locked by rules until Admin updates it.
                     createdAt: new Date().toISOString()
                 });
 
