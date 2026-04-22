@@ -40,7 +40,6 @@
 <body>
 
     <div class="form-container" id="registrationForm">
-        
         <div class="target-banner" id="targetBanner">
             <span>Currently Enrolling For:</span>
             <strong id="targetEventName">Loading Event Data...</strong>
@@ -59,9 +58,7 @@
             <label style="display: block; margin-bottom: 4px; color: #cbd5e1; font-weight: bold; margin-top: 30px;">Starting Roster (In-Game Names)</label>
             <span class="helper-text" style="display:block; margin-bottom: 15px; font-size: 12px; color: var(--lvlup-accent);">⚠️ CRITICAL: Names must match exactly as they appear in Mobile Legends. Mismatched IGNs may result in disqualification.</span>
             
-            <div class="input-group">
-                <input type="text" id="captainIGN" placeholder="Player 1 (Captain IGN)">
-            </div>
+            <div class="input-group"><input type="text" id="captainIGN" placeholder="Player 1 (Captain IGN)"></div>
             <div class="roster-grid">
                 <div class="input-group"><input type="text" id="player2" placeholder="Player 2 IGN"></div>
                 <div class="input-group"><input type="text" id="player3" placeholder="Player 3 IGN"></div>
@@ -71,7 +68,6 @@
 
             <button id="submitTeamBtn" class="submit-btn" disabled>Awaiting Network...</button>
         </div>
-        
         <a href="dashboard.html" style="display: block; text-align: center; color: var(--lvlup-text-muted); text-decoration: none; margin-top: 20px; font-size: 14px;">Cancel & Return to Dashboard</a>
     </div>
 
@@ -84,21 +80,14 @@
         let targetTourneyId = null;
         let targetTourneyName = "";
         
-        // DOM Elements
         const btn = document.getElementById('submitTeamBtn');
         const formBody = document.getElementById('formBody');
-
-        // Extract the tournament ID from the URL string
         const urlParams = new URLSearchParams(window.location.search);
         const urlId = urlParams.get('id');
 
-        // ==========================================
-        // SECURITY: TOURNAMENT VALIDATION
-        // ==========================================
-        // This function ensures a user cannot register without a valid tournament ID.
+        // --- TOURNAMENT VALIDATION ---
         async function fetchTargetTournament() {
             if (!urlId) {
-                // Failsafe: No ID present. Hide the form entirely to prevent orphaned data.
                 formBody.style.display = 'none';
                 document.getElementById('targetBanner').style.borderLeftColor = "var(--lvlup-danger)";
                 document.getElementById('targetBanner').innerHTML = `
@@ -111,7 +100,6 @@
 
             targetTourneyId = urlId;
             try {
-                // Fetch the tournament from Firebase to verify it actually exists
                 const tSnap = await getDoc(doc(db, "tournaments", urlId));
                 if (tSnap.exists()) {
                     targetTourneyName = tSnap.data().title;
@@ -119,7 +107,6 @@
                     btn.disabled = false;
                     document.getElementById('targetEventName').innerText = targetTourneyName;
                 } else {
-                    // Failsafe: ID exists in URL, but the tournament was deleted or is fake.
                     formBody.style.display = 'none';
                     document.getElementById('targetBanner').style.borderLeftColor = "var(--lvlup-danger)";
                     document.getElementById('targetBanner').innerHTML = `
@@ -134,32 +121,21 @@
             }
         }
 
-        // ==========================================
-        // AUTHENTICATION CHECK
-        // ==========================================
+        // --- AUTHENTICATION CHECK ---
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 currentUserId = user.uid;
                 document.getElementById('registrationForm').style.display = "block";
                 fetchTargetTournament();
             } else {
-                // If not logged in, redirect to login page but KEEP the URL ID parameter so they don't lose their place!
                 const redirectParams = urlId ? `?id=${urlId}` : '';
                 window.location.href = `login.html${redirectParams}`;
             }
         });
 
-        // ==========================================
-        // DATA SANITIZATION HELPER (BUG PATCH #3)
-        // ==========================================
-        // Strips all empty spaces from a string to verify it contains real letters/numbers.
-        const isValidString = (str) => {
-            return str.replace(/\s/g, '').length >= 3;
-        };
+        const isValidString = (str) => str.replace(/\s/g, '').length >= 3;
 
-        // ==========================================
-        // SUBMISSION & DUPLICATE CHECK
-        // ==========================================
+        // --- SUBMISSION & DUPLICATE CHECKS ---
         document.getElementById('submitTeamBtn').addEventListener('click', async () => {
             const tName = document.getElementById('teamName').value.trim();
             const capIGN = document.getElementById('captainIGN').value.trim();
@@ -168,44 +144,45 @@
             const p4 = document.getElementById('player4').value.trim();
             const p5 = document.getElementById('player5').value.trim();
             
-            // 1. Whitespace & Length Validation Check
             if (!isValidString(tName) || !isValidString(capIGN) || !isValidString(p2) || !isValidString(p3) || !isValidString(p4) || !isValidString(p5)) {
                 alert("ACCESS DENIED: All names must contain at least 3 valid characters (blank spaces do not count).");
                 return;
             }
 
-            // Lock UI to prevent spam clicking
             btn.innerText = "Encrypting Data...";
             btn.disabled = true;
 
             try {
-                // 2. Database Query: Check if this exact user already registered for this exact event
-                const duplicateQuery = query(
-                    collection(db, "teams"), 
-                    where("ownerUid", "==", currentUserId), 
-                    where("tournamentId", "==", targetTourneyId)
-                );
-                const dupSnap = await getDocs(duplicateQuery);
-                
-                // If a document is found, bounce them.
-                if (!dupSnap.empty) {
-                    alert("DUPLICATE DETECTED: You have already registered a squad for this specific tournament.");
+                // BUG PATCH 2A: Check if the CAPTAIN already registered for this event
+                const captainQuery = query(collection(db, "teams"), where("ownerUid", "==", currentUserId), where("tournamentId", "==", targetTourneyId));
+                const capSnap = await getDocs(captainQuery);
+                if (!capSnap.empty) {
+                    alert("ACCESS DENIED: You have already registered a squad for this specific tournament under your account.");
                     btn.innerText = "Submit Roster to Tournament";
                     btn.disabled = false;
                     return;
                 }
 
-                // 3. Final Write: Save the clean, verified data to Firebase
+                // BUG PATCH 2B: Check if the TEAM NAME is already taken in this specific event by anyone else
+                const nameQuery = query(collection(db, "teams"), where("tournamentId", "==", targetTourneyId), where("teamName", "==", tName));
+                const nameSnap = await getDocs(nameQuery);
+                if (!nameSnap.empty) {
+                    alert(`ACCESS DENIED: The team name "${tName}" has already been claimed for this tournament! Please choose a different name.`);
+                    btn.innerText = "Submit Roster to Tournament";
+                    btn.disabled = false;
+                    return;
+                }
+
+                // Final Write: Save the clean, verified data
                 await addDoc(collection(db, "teams"), {
                     ownerUid: currentUserId, 
                     tournamentId: targetTourneyId,
-                    tournamentName: targetTourneyName, // Stored to make dashboard rendering easier
+                    tournamentName: targetTourneyName,
                     teamName: tName,
                     captain: capIGN,
                     roster: [p2, p3, p4, p5],
-                    wins: 0,
-                    losses: 0,
-                    status: "Pending Review", // The default state. Locked by rules until Admin updates it.
+                    wins: 0, losses: 0,
+                    status: "Pending Review", 
                     createdAt: new Date().toISOString()
                 });
 
