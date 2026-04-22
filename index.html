@@ -3,168 +3,179 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LVLUP Tournaments | MLBB Arena</title>
+    <title>LVLUP | The Premier MLBB Network</title>
     <style>
         :root { 
             --lvlup-bg: #0a0f16; --lvlup-panel: #131c28; 
             --lvlup-accent: #00ffcc; --lvlup-text: #f8fafc; 
-            --lvlup-text-muted: #64748b; --lvlup-nav: #05080c;
+            --lvlup-text-muted: #64748b; 
         }
 
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--lvlup-bg); color: var(--lvlup-text); margin: 0; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--lvlup-bg); color: var(--lvlup-text); margin: 0; padding: 0; }
         
-        /* Navigation Bar */
-        nav { background: var(--lvlup-nav); padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--lvlup-accent); }
-        .logo { font-size: 24px; font-weight: bold; color: var(--lvlup-accent); letter-spacing: 2px; }
-        .nav-links a { color: var(--lvlup-text); text-decoration: none; margin-left: 20px; font-weight: bold; transition: color 0.3s; }
+        /* Navigation */
+        nav { background: #05080c; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--lvlup-accent); }
+        .logo { font-size: 24px; font-weight: bold; color: var(--lvlup-accent); text-decoration: none; letter-spacing: 2px; }
+        .nav-links a { color: var(--lvlup-text); text-decoration: none; font-weight: bold; margin-left: 20px; transition: 0.2s; }
         .nav-links a:hover { color: var(--lvlup-accent); }
-        .btn-register { background: var(--lvlup-accent); color: #000 !important; padding: 8px 16px; border-radius: 4px; }
 
+        /* Hero Banner */
+        .hero { text-align: center; padding: 80px 20px; background: radial-gradient(circle at bottom, #131c28 0%, #0a0f16 100%); border-bottom: 1px solid #1e293b;}
+        .hero h1 { font-size: 48px; color: var(--lvlup-accent); margin: 0 0 10px 0; text-transform: uppercase;}
+        .hero p { font-size: 18px; color: var(--lvlup-text-muted); max-width: 600px; margin: 0 auto 30px auto; line-height: 1.5;}
+
+        /* Main Content Grid */
         .container { max-width: 1200px; margin: 40px auto; padding: 0 20px; }
-
-        /* Hero Section */
-        .hero { background: var(--lvlup-panel); padding: 60px 40px; border-radius: 12px; text-align: center; margin-bottom: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .hero h1 { font-size: 48px; margin: 0 0 20px 0; }
-        .hero h1 span { color: var(--lvlup-accent); }
-        .hero p { font-size: 18px; color: var(--lvlup-text-muted); max-width: 600px; margin: 0 auto 30px auto; }
+        .section-title { font-size: 24px; border-bottom: 2px solid #1e293b; padding-bottom: 10px; margin-bottom: 30px; }
         
-        /* Hero Button */
-        .hero button { background: var(--lvlup-accent); color: #000; border: none; padding: 15px 30px; font-size: 18px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s; }
-        .hero button:hover { background: #00ccaa; transform: translateY(-2px); }
-
-        /* Tournaments Grid */
-        .section-title { font-size: 28px; margin-bottom: 20px; border-left: 4px solid var(--lvlup-accent); padding-left: 15px; margin-top: 40px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-        .card { background: var(--lvlup-panel); padding: 25px; border-radius: 8px; border: 1px solid #1e293b; transition: transform 0.2s; }
-        .card:hover { transform: translateY(-5px); border-color: var(--lvlup-accent); }
-        .card h3 { margin-top: 0; font-size: 22px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 30px; }
         
-        /* Dynamic Badges */
-        .status-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-bottom: 15px; text-transform: uppercase; }
-        .badge-live { background: #ef4444; color: white; }
-        .badge-upcoming { background: transparent; color: var(--lvlup-accent); border: 1px solid var(--lvlup-accent); }
-        .badge-completed { background: transparent; color: var(--lvlup-text-muted); border: 1px solid var(--lvlup-text-muted); }
+        /* Tournament Card */
+        .card { background: var(--lvlup-panel); border: 1px solid #1e293b; border-radius: 12px; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); display: flex; flex-direction: column;}
+        .card h3 { margin: 0 0 5px 0; font-size: 22px; color: var(--lvlup-text); }
+        .card .date { color: var(--lvlup-accent); font-size: 14px; font-weight: bold; text-transform: uppercase; margin-bottom: 15px;}
+        .card .desc { color: var(--lvlup-text-muted); font-size: 14px; line-height: 1.5; flex-grow: 1; margin-bottom: 20px;}
+        
+        /* BASIC BRACKET WIDGET (Injected into Card) */
+        .basic-bracket-widget { background: #0f172a; border-radius: 6px; padding: 10px; margin-bottom: 20px; border-left: 3px solid var(--lvlup-accent);}
+        .widget-title { font-size: 11px; text-transform: uppercase; color: var(--lvlup-text-muted); font-weight: bold; margin-bottom: 8px;}
+        .widget-match { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; border-bottom: 1px solid #1e293b;}
+        .widget-match:last-child { border-bottom: none; }
+
+        /* Buttons */
+        .btn-group { display: flex; gap: 10px; }
+        .btn-primary { flex: 1; text-align: center; background: var(--lvlup-accent); color: #000; padding: 12px; border: none; border-radius: 6px; font-weight: bold; text-decoration: none; transition: 0.2s;}
+        .btn-primary:hover { background: #00ccaa; }
+        .btn-secondary { flex: 1; text-align: center; background: transparent; color: var(--lvlup-text); border: 1px solid #334155; padding: 12px; border-radius: 6px; font-weight: bold; text-decoration: none; transition: 0.2s;}
+        .btn-secondary:hover { border-color: var(--lvlup-accent); color: var(--lvlup-accent); }
     </style>
 </head>
 <body>
 
     <nav>
-        <div class="logo">LVLUP TOURNAMENTS</div>
+        <a href="index.html" class="logo">LVLUP</a>
         <div class="nav-links">
-            <a href="login.html" id="portalLink">Captain's Portal</a>
-            <a href="register.html" class="btn-register">Register Team</a>
+            <a href="login.html" id="navLoginBtn">Captain Portal</a>
         </div>
     </nav>
 
+    <div class="hero">
+        <h1>The Proving Grounds</h1>
+        <p>Register your Mobile Legends squad, climb the automated brackets, and track your progress live on the official LVLUP network.</p>
+        <a href="register.html" class="btn-primary" style="display: inline-block; padding: 15px 30px;">Enroll a Squad</a>
+    </div>
+
     <div class="container">
-        <div class="hero">
-            <h1>Dominate The <span>Land of Dawn</span></h1>
-            <p>Join the premier competitive circuit for Mobile Legends: Bang Bang. Compete for prize pools, climb the regional leaderboard, and build your legacy.</p>
-            <button onclick="window.location.href='register.html'">Enroll Your Squad Now</button>
-        </div>
-
-        <h2 class="section-title">Featured Live Match</h2>
-        <div class="grid">
-            <div class="card" style="border-color: #ef4444;">
-                <span class="status-badge badge-live">🔴 LIVE NOW</span>
-                <h3>Grand Finals Invitational</h3>
-                <p style="color: var(--lvlup-text-muted); font-size: 18px;">
-                    <strong id="liveTeamA" style="color:#fff;">Loading...</strong> 
-                    <span style="color: var(--lvlup-accent); margin: 0 10px;">VS</span> 
-                    <strong id="liveTeamB" style="color:#fff;">Loading...</strong>
-                </p>
-                <a href="hub.html" style="color: var(--lvlup-accent); text-decoration: none; font-weight: bold; margin-top: 10px; display: inline-block;">Watch Live Stream →</a>
-            </div>
-        </div>
-
-        <h2 class="section-title">Tournament Circuit</h2>
-        <div class="grid" id="dynamicTournamentGrid">
-            <p style="color: var(--lvlup-text-muted);">Decrypting network data... scanning for events...</p>
+        <h2 class="section-title">Active Events</h2>
+        <div class="grid" id="eventsGrid">
+            <p style="color: var(--lvlup-text-muted);">Scanning database for open tournaments...</p>
         </div>
     </div>
 
     <script type="module">
         import { db, auth } from './firebase-setup.js';
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        // IMPORT ADDED: query, where, orderBy for fetching data
+        import { collection, query, where, orderBy, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-        // Date Formatter Helper
-        function formatDate(dateString) {
-            const options = { year: 'numeric', month: 'long', day: 'numeric' };
-            return new Date(dateString + 'T00:00:00').toLocaleDateString(undefined, options);
+        // Auth state logic to change the Nav button contextually
+        onAuthStateChanged(auth, (user) => {
+            const navBtn = document.getElementById('navLoginBtn');
+            if (user) {
+                navBtn.innerText = "Dashboard";
+                navBtn.href = "dashboard.html";
+            } else {
+                navBtn.innerText = "Captain Login";
+                navBtn.href = "login.html";
+            }
+        });
+
+        // ==========================================
+        // FETCH AND RENDER STOREFRONT EVENTS
+        // ==========================================
+        async function loadStorefront() {
+            const grid = document.getElementById('eventsGrid');
+            try {
+                // Fetch tournaments that are NOT hidden by the Admin
+                const q = query(collection(db, "tournaments"), where("isHidden", "==", false));
+                const snapshot = await getDocs(q);
+
+                grid.innerHTML = "";
+
+                if (snapshot.empty) {
+                    grid.innerHTML = `<p style="color: var(--lvlup-text-muted);">No active tournaments available at this time. Check back later.</p>`;
+                    return;
+                }
+
+                // Sort newest first manually to avoid complex Firestore indexes
+                let eventsArray = [];
+                snapshot.forEach(docSnap => eventsArray.push({ id: docSnap.id, ...docSnap.data() }));
+                eventsArray.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+                eventsArray.forEach(data => {
+                    const tId = data.id;
+                    
+                    // Build the base card layout
+                    const card = document.createElement('div');
+                    card.className = "card";
+                    card.innerHTML = `
+                        <h3>${data.title}</h3>
+                        <div class="date">${data.date} • ${data.status.toUpperCase()}</div>
+                        <div class="desc">${data.description || "No description provided."}</div>
+                        
+                        <div id="widget-${tId}"></div> 
+                        
+                        <div class="btn-group">
+                            <a href="bracket.html?id=${tId}" class="btn-secondary">View Bracket</a>
+                            <a href="register.html?id=${tId}" class="btn-primary">Register Team</a>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+
+                    // ==========================================
+                    // BASIC BRACKET WIDGET INJECTION
+                    // ==========================================
+                    // After creating the card, we attach a real-time listener to see if a bracket exists for this event
+                    onSnapshot(doc(db, "brackets", tId), (bracketSnap) => {
+                        const widgetContainer = document.getElementById(`widget-${tId}`);
+                        
+                        if (bracketSnap.exists() && bracketSnap.data().matches) {
+                            const matches = bracketSnap.data().matches;
+                            
+                            // We will only display up to 3 matches on the homepage to keep it clean (The "Basic" view)
+                            let widgetHtml = `<div class="basic-bracket-widget">
+                                                <div class="widget-title">Live Matchups Preview</div>`;
+                            
+                            const displayLimit = Math.min(matches.length, 3);
+                            for(let i = 0; i < displayLimit; i++) {
+                                const m = matches[i];
+                                widgetHtml += `
+                                    <div class="widget-match">
+                                        <span>${m.team1 || "TBD"} vs ${m.team2 || "TBD"}</span>
+                                        <span style="color:var(--lvlup-accent)">${m.round}</span>
+                                    </div>
+                                `;
+                            }
+                            
+                            if (matches.length > 3) {
+                                widgetHtml += `<div style="font-size: 10px; color: var(--lvlup-text-muted); text-align: center; margin-top: 5px;">+ ${matches.length - 3} more matches...</div>`;
+                            }
+                            
+                            widgetHtml += `</div>`;
+                            widgetContainer.innerHTML = widgetHtml;
+                        } else {
+                            // If no bracket exists yet, clear the widget area
+                            widgetContainer.innerHTML = "";
+                        }
+                    });
+                });
+
+            } catch (error) {
+                grid.innerHTML = `<p style="color: #ef4444;">Error loading events: ${error.message}</p>`;
+            }
         }
 
-        // Auth State Listener for the Navbar
-        onAuthStateChanged(auth, (user) => {
-            const portalLink = document.getElementById('portalLink');
-            if (user) {
-                portalLink.innerText = "My Dashboard";
-                portalLink.href = "dashboard.html";
-            } else {
-                portalLink.innerText = "Captain's Portal";
-                portalLink.href = "login.html";
-            }
-        });
-
-        // 1. Featured Match Listener (Pulls newest active stream)
-        const liveQuery = query(collection(db, "streams"), orderBy("createdAt", "desc"));
-        onSnapshot(liveQuery, (snapshot) => {
-            let foundLive = false;
-            snapshot.forEach((docSnap) => {
-                if (!foundLive && docSnap.data().isHidden !== true) {
-                    const data = docSnap.data();
-                    document.getElementById("liveTeamA").innerText = data.teamA || "TBD";
-                    document.getElementById("liveTeamB").innerText = data.teamB || "TBD";
-                    foundLive = true; // Stop after finding the most recent visible one
-                }
-            });
-            if (!foundLive) {
-                document.getElementById("liveTeamA").innerText = "OFFLINE";
-                document.getElementById("liveTeamB").innerText = "OFFLINE";
-            }
-        });
-
-        // 2. Dynamic Tournament Listener
-        const tGrid = document.getElementById('dynamicTournamentGrid');
-        const tourneyQuery = query(collection(db, "tournaments"), orderBy("createdAt", "desc"));
-        
-        onSnapshot(tourneyQuery, (snapshot) => {
-            tGrid.innerHTML = ""; 
-            
-            if (snapshot.empty) {
-                tGrid.innerHTML = '<p style="color: var(--lvlup-text-muted);">No active tournaments at the moment. Gather your squad and check back soon!</p>';
-                return;
-            }
-
-            snapshot.forEach((doc) => {
-                const event = doc.data();
-                
-                // Skip this card entirely if the admin clicked "Hide"
-                if (event.isHidden === true) return; 
-
-                let badgeClass = "badge-upcoming";
-                let statusText = "Upcoming";
-                
-                if (event.status === "live") {
-                    badgeClass = "badge-live";
-                    statusText = "🔴 LIVE";
-                } else if (event.status === "completed") {
-                    badgeClass = "badge-completed";
-                    statusText = "Completed";
-                }
-
-                const card = `
-                    <div class="card">
-                        <span class="status-badge ${badgeClass}">${statusText}</span>
-                        <h3>${event.title}</h3>
-                        <p style="color: var(--lvlup-text-muted); margin: 5px 0;"><strong>Date:</strong> ${formatDate(event.date)}</p>
-                        <p style="color: var(--lvlup-accent); font-weight: bold; margin: 5px 0 20px 0;">🏆 Prize: ${event.prizePool}</p>
-                        <a href="tournament.html?id=${doc.id}" style="color: var(--lvlup-text); text-decoration: underline;">View Details</a>
-                    </div>
-                `;
-                tGrid.innerHTML += card;
-            });
-        });
+        loadStorefront();
     </script>
 </body>
 </html>
