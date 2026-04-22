@@ -24,18 +24,18 @@
         .header-panel h1 { margin: 0; color: var(--lvlup-accent); }
 
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
-        .squad-card { background: var(--lvlup-panel); border-radius: 12px; border: 1px solid #1e293b; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); transition: transform 0.2s; }
+        .squad-card { background: var(--lvlup-panel); border-radius: 12px; border: 1px solid #1e293b; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); transition: transform 0.2s; display: flex; flex-direction: column;}
         .squad-card:hover { transform: translateY(-3px); border-color: var(--lvlup-text-muted); }
         
         .squad-header { border-bottom: 1px solid #1e293b; padding-bottom: 10px; margin-bottom: 15px; }
         .squad-header h3 { margin: 0 0 5px 0; font-size: 22px; color: var(--lvlup-text); }
         .event-name { font-size: 13px; color: var(--lvlup-accent); text-transform: uppercase; letter-spacing: 1px; }
         
-        .roster-list { margin: 0; padding: 0; list-style: none; color: #cbd5e1; font-size: 15px; margin-bottom: 20px;}
+        .roster-list { margin: 0; padding: 0; list-style: none; color: #cbd5e1; font-size: 15px; margin-bottom: 20px; flex-grow: 1;}
         .roster-list li { margin-bottom: 5px; }
         .roster-list span { color: var(--lvlup-text-muted); font-size: 12px; margin-right: 8px; }
 
-        .status-badge { display: inline-block; padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: bold; text-transform: uppercase; width: 100%; text-align: center; box-sizing: border-box;}
+        .status-badge { display: inline-block; padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: bold; text-transform: uppercase; width: 100%; text-align: center; box-sizing: border-box; margin-bottom: 10px;}
         .status-pending { background: rgba(245, 158, 11, 0.1); color: var(--lvlup-pending); border: 1px solid var(--lvlup-pending); }
         .status-approved { background: rgba(16, 185, 129, 0.1); color: var(--lvlup-approved); border: 1px solid var(--lvlup-approved); }
         .status-disqualified { background: rgba(239, 68, 68, 0.1); color: var(--lvlup-danger); border: 1px solid var(--lvlup-danger); }
@@ -44,6 +44,10 @@
         .empty-state h2 { color: var(--lvlup-text-muted); }
         .btn-primary { background: var(--lvlup-accent); color: #000; padding: 12px 24px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; margin-top: 15px; transition: 0.2s;}
         .btn-primary:hover { background: #00ccaa; }
+
+        /* NEW: Withdraw Button Styling */
+        .btn-withdraw { background: transparent; color: var(--lvlup-text-muted); border: 1px dashed var(--lvlup-text-muted); width: 100%; padding: 8px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: 0.2s;}
+        .btn-withdraw:hover { border-color: var(--lvlup-danger); color: var(--lvlup-danger); }
     </style>
 </head>
 <body>
@@ -73,11 +77,11 @@
     <script type="module">
         import { db, auth } from './firebase-setup.js';
         import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { doc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        // IMPORT ADDED: deleteDoc to allow users to withdraw
+        import { doc, getDoc, collection, query, where, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                // If they are logged in via Google, they are allowed straight in.
                 document.getElementById('dashboardContent').style.display = "block";
                 
                 try {
@@ -117,13 +121,19 @@
 
                 querySnapshot.forEach((docSnap) => {
                     const team = docSnap.data();
+                    const teamId = docSnap.id;
                     let statusClass = "status-pending";
                     let statusText = team.status || "Pending Review";
+                    let withdrawButtonHtml = "";
                     
                     if (statusText.toLowerCase().includes("approved")) {
                         statusClass = "status-approved";
                     } else if (statusText.toLowerCase().includes("disqualified") || statusText.toLowerCase().includes("rejected")) {
                         statusClass = "status-disqualified";
+                    } else {
+                        // BUG PATCH 3: The Typo Trap. 
+                        // If it is pending, give them a button to withdraw and fix their mistakes.
+                        withdrawButtonHtml = `<button class="btn-withdraw" onclick="withdrawTeam('${teamId}')">Withdraw Registration</button>`;
                     }
 
                     const card = `
@@ -140,6 +150,7 @@
                                 <li><span>[PLYR]</span> ${team.roster[3]}</li>
                             </ul>
                             <div class="status-badge ${statusClass}">Status: ${statusText}</div>
+                            ${withdrawButtonHtml}
                         </div>
                     `;
                     grid.innerHTML += card;
@@ -150,6 +161,20 @@
                 grid.innerHTML = `<p style="color: #ef4444;">Error loading your squads. Please refresh the page.</p>`;
             }
         }
+
+        // --- WITHDRAW LOGIC ---
+        // Allowed by Firebase rules because their Auth Token matches the document's ownerUid
+        window.withdrawTeam = async (teamId) => {
+            if (confirm("Are you sure you want to withdraw this team? This action cannot be undone.")) {
+                try {
+                    await deleteDoc(doc(db, "teams", teamId));
+                    // Refresh the page automatically to show the card was deleted
+                    window.location.reload();
+                } catch (error) {
+                    alert("Error withdrawing team: " + error.message);
+                }
+            }
+        };
 
         document.getElementById('logoutBtn').addEventListener('click', () => {
             signOut(auth).then(() => window.location.replace("index.html"));
