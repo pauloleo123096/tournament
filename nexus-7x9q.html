@@ -32,7 +32,6 @@
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #1e293b; vertical-align: middle; }
         th { color: var(--lvlup-text-muted); text-transform: uppercase; font-size: 12px; }
         
-        /* Standard Action Buttons */
         .btn-danger { background: transparent; border: 1px solid var(--lvlup-danger); color: var(--lvlup-danger); padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; margin-right: 5px; margin-bottom: 5px;}
         .btn-danger:hover { background: var(--lvlup-danger); color: white; }
         
@@ -42,7 +41,10 @@
         .btn-action { background: transparent; border: 1px solid var(--lvlup-edit); color: var(--lvlup-edit); padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; margin-right: 5px; margin-bottom: 5px;}
         .btn-action:hover { background: var(--lvlup-edit); color: #000; }
 
-        /* Roster Approval Specifics */
+        /* NEW: Generate Bracket Button */
+        .btn-generate { background: rgba(0, 255, 204, 0.1); border: 1px solid var(--lvlup-accent); color: var(--lvlup-accent); padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; margin-right: 5px; margin-bottom: 5px;}
+        .btn-generate:hover { background: var(--lvlup-accent); color: #000; }
+
         .btn-approve { background: rgba(16, 185, 129, 0.1); border: 1px solid var(--lvlup-success); color: var(--lvlup-success); padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; margin-right: 5px; }
         .btn-approve:hover { background: var(--lvlup-success); color: white; }
         .btn-reject { background: rgba(239, 68, 68, 0.1); border: 1px solid var(--lvlup-danger); color: var(--lvlup-danger); padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; }
@@ -153,23 +155,21 @@
     <script type="module">
         import { db, auth } from './firebase-setup.js';
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { doc, getDoc, collection, getDocs, deleteDoc, addDoc, updateDoc, onSnapshot, query, orderBy, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        // IMPORT ADDED: setDoc for Bracket Generation
+        import { doc, getDoc, setDoc, collection, getDocs, deleteDoc, addDoc, updateDoc, onSnapshot, query, orderBy, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         let isEditMode = false;
-        let teamUnsubscribe = null; // Used to kill the team database listener when you switch dropdown filters
+        let teamUnsubscribe = null; 
 
-        // ==========================================
-        // ADMIN AUTHENTICATION
-        // ==========================================
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 const profile = await getDoc(doc(db, "users", user.uid));
                 if (profile.exists() && profile.data().role === "admin") {
                     document.getElementById('adminContent').style.display = "block";
                     loadUsers();
-                    loadTournaments(); // This now also builds the dropdown!
+                    loadTournaments(); 
                     loadStreams();
-                    loadTeams("all");  // Default loads all teams on boot
+                    loadTeams("all");  
                 } else {
                     window.location.replace("index.html");
                 }
@@ -179,23 +179,19 @@
         });
 
         // ==========================================
-        // 1. TEAM APPROVAL & FILTER LOGIC (BUG PATCH #2)
+        // 1. TEAM APPROVAL & FILTER LOGIC
         // ==========================================
-        // Listens for dropdown changes and reloads the table
         document.getElementById('teamFilterDropdown').addEventListener('change', (e) => {
             loadTeams(e.target.value);
         });
 
         function loadTeams(tournamentId) {
-            // If a listener already exists, kill it to prevent double-rendering and memory leaks
             if (teamUnsubscribe) teamUnsubscribe();
 
             let q;
-            // Build query based on dropdown selection
             if (tournamentId === "all") {
                 q = query(collection(db, "teams"), orderBy("createdAt", "desc"));
             } else {
-                // To avoid requiring complex composite indexes in Firestore, we just pull the specific tournament
                 q = query(collection(db, "teams"), where("tournamentId", "==", tournamentId));
             }
 
@@ -204,16 +200,10 @@
                 tbody.innerHTML = "";
                 if (snapshot.empty) { tbody.innerHTML = "<tr><td colspan='4' style='color: var(--lvlup-text-muted); text-align: center; padding: 20px;'>No rosters found for this selection.</td></tr>"; return; }
 
-                // Sort the filtered array in Javascript to bypass Firebase index requirements
                 let teamsArray = [];
                 snapshot.forEach(docSnap => teamsArray.push({ id: docSnap.id, ...docSnap.data() }));
-                
-                if(tournamentId !== "all") {
-                    // Manually sort newest first if we used the where() query
-                    teamsArray.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
-                }
+                if(tournamentId !== "all") teamsArray.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-                // Render the table
                 teamsArray.forEach((data) => {
                     const statusClass = data.status === "Approved" ? "status-approved" : (data.status === "Disqualified" ? "status-disqualified" : "status-pending");
                     tbody.innerHTML += `
@@ -239,7 +229,6 @@
             });
         }
         
-        // Updates the team document with the new status
         window.updateTeamStatus = async (id, newStatus) => {
             await updateDoc(doc(db, "teams", id), { status: newStatus });
         };
@@ -253,9 +242,7 @@
             const tB = document.getElementById('bcTeamB').value;
             const sLink = document.getElementById('bcStreamLink').value;
             const msg = document.getElementById('bcMessage');
-            
             if(!tA || !tB || !sLink) { msg.style.color="red"; msg.innerText="All fields required."; return; }
-            
             try {
                 await addDoc(collection(db, "streams"), { teamA: tA, teamB: tB, streamUrl: sLink, isHidden: false, createdAt: new Date().toISOString() });
                 msg.style.color = "var(--lvlup-accent)"; msg.innerText = "Stream Pushed to Network!";
@@ -287,7 +274,7 @@
 
 
         // ==========================================
-        // 3. TOURNAMENT CMS LOGIC (UPDATED WITH CASCADING DELETE)
+        // 3. TOURNAMENT CMS LOGIC
         // ==========================================
         document.getElementById('saveTournamentBtn').addEventListener('click', async () => {
             const id = document.getElementById('tId').value; const title = document.getElementById('tTitle').value; const date = document.getElementById('tDate').value; const prize = document.getElementById('tPrize').value; const status = document.getElementById('tStatus').value; const desc = document.getElementById('tDesc').value; const msg = document.getElementById('tMessage');
@@ -305,38 +292,36 @@
             } catch (e) { msg.style.color = "red"; msg.innerText = "Error: " + e.message; }
         });
 
-        // Pulls tournaments AND populates the team filter dropdown simultaneously
         function loadTournaments() {
             onSnapshot(query(collection(db, "tournaments"), orderBy("createdAt", "desc")), (snapshot) => {
                 const tbody = document.getElementById('tourneyTableBody'); 
                 const filterDropdown = document.getElementById('teamFilterDropdown');
-                const currentFilter = filterDropdown.value; // Store current selection so it doesn't reset when data updates
+                const currentFilter = filterDropdown.value; 
                 
                 tbody.innerHTML = "";
-                filterDropdown.innerHTML = '<option value="all">View All Events</option>'; // Reset Dropdown
+                filterDropdown.innerHTML = '<option value="all">View All Events</option>'; 
 
                 snapshot.forEach((docSnap) => {
                     const data = docSnap.data(); const id = docSnap.id;
                     
-                    // 1. Build Tournament Table row
+                    // NEW: Generate Bracket Button Added to UI
                     tbody.innerHTML += `
                         <tr>
                             <td><strong>${data.title}</strong><br><span style="font-size: 11px;">${data.date}</span></td>
                             <td>${data.status}</td>
                             <td>${data.isHidden ? "<span style='color:red;'>Hidden</span>" : "<span style='color:#00ffcc;'>Public</span>"}</td>
                             <td>
+                                <button class="btn-generate" onclick="generateBracket('${id}')">Build Bracket</button>
+                                <br>
                                 <button class="btn-action" onclick="editEvent('${id}', '${data.title.replace(/'/g, "\\'")}', '${data.date}', '${data.prizePool || ''}', '${data.status}', '${(data.description || '').replace(/'/g, "\\'").replace(/\n/g, "\\n")}')">Edit</button>
                                 <button class="btn-secondary" onclick="toggleVis('${id}', ${data.isHidden})">${data.isHidden ? "Unhide" : "Hide"}</button>
                                 <button class="btn-danger" onclick="delEvent('${id}')">Purge</button>
                             </td>
                         </tr>
                     `;
-
-                    // 2. Build Dropdown option
                     filterDropdown.innerHTML += `<option value="${id}">${data.title}</option>`;
                 });
 
-                // Restore previous selection if it still exists
                 if(currentFilter !== "all" && filterDropdown.querySelector(`option[value="${currentFilter}"]`)) {
                     filterDropdown.value = currentFilter;
                 }
@@ -349,39 +334,87 @@
         }
         
         document.getElementById('cancelEditBtn').addEventListener('click', exitEditMode);
-        
         function exitEditMode() {
             isEditMode = false; document.getElementById('formTitle').innerText = "Deploy Tournament"; document.getElementById('formTitle').style.color = "var(--lvlup-accent)"; document.getElementById('saveTournamentBtn').innerText = "Initialize Event"; document.getElementById('saveTournamentBtn').classList.remove("btn-edit-mode"); document.getElementById('cancelEditBtn').style.display = "none"; clearForm();
         }
-        
         function clearForm() {
             document.getElementById('tId').value = ''; document.getElementById('tTitle').value = ''; document.getElementById('tDate').value = ''; document.getElementById('tPrize').value = ''; document.getElementById('tDesc').value = '';
         }
-        
         window.toggleVis = async (id, isHidden) => await updateDoc(doc(db, "tournaments", id), { isHidden: !isHidden });
         
-        // BUG PATCH #1: Cascading Delete
         window.delEvent = async (id) => { 
             if(confirm("CRITICAL WARNING: Permanently delete this event AND wipe all teams registered for it? This cannot be undone.")) {
-                
-                // 1. Fetch all teams tied to this tournament ID
                 const q = query(collection(db, "teams"), where("tournamentId", "==", id));
                 const teamSnaps = await getDocs(q);
-
-                // 2. Loop through and delete them all first (so they don't become orphaned)
                 const deletePromises = [];
-                teamSnaps.forEach(docSnap => {
-                    deletePromises.push(deleteDoc(doc(db, "teams", docSnap.id)));
-                });
-                await Promise.all(deletePromises); // Executes all deletions simultaneously
-
-                // 3. Finally, delete the actual tournament
+                teamSnaps.forEach(docSnap => { deletePromises.push(deleteDoc(doc(db, "teams", docSnap.id))); });
+                await Promise.all(deletePromises); 
                 await deleteDoc(doc(db, "tournaments", id)); 
             } 
         }
 
         // ==========================================
-        // 4. USER AUDIT LOGIC
+        // 4. BRACKET GENERATOR LOGIC (PHASE 4)
+        // ==========================================
+        window.generateBracket = async (tournamentId) => {
+            if(!confirm("Generate Bracket? This will overwrite any existing bracket for this tournament and pull ONLY 'Approved' teams.")) return;
+
+            try {
+                // 1. Fetch only approved teams for this tournament
+                const q = query(collection(db, "teams"), where("tournamentId", "==", tournamentId), where("status", "==", "Approved"));
+                const snapshot = await getDocs(q);
+                
+                let teams = [];
+                snapshot.forEach(docSnap => teams.push({ id: docSnap.id, name: docSnap.data().teamName }));
+
+                if (teams.length < 2) {
+                    alert("Error: You need at least 2 Approved teams to generate a bracket.");
+                    return;
+                }
+
+                // 2. Fisher-Yates Shuffle Algorithm (Randomize seeds)
+                for (let i = teams.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [teams[i], teams[j]] = [teams[j], teams[i]];
+                }
+
+                // 3. Pair teams up for Round 1
+                let matches = [];
+                let matchIdCounter = 1;
+                
+                for (let i = 0; i < teams.length; i += 2) {
+                    let team1 = teams[i];
+                    let team2 = teams[i + 1] ? teams[i + 1] : { id: "bye", name: "BYE" }; // If odd number of teams, grant a BYE
+                    
+                    matches.push({
+                        matchId: matchIdCounter++,
+                        round: 1,
+                        team1: team1.name,
+                        team1Id: team1.id,
+                        team2: team2.name,
+                        team2Id: team2.id,
+                        winner: null,
+                        score: ""
+                    });
+                }
+
+                // 4. Save the generated bracket structure to Firebase, using the tournamentId as the document ID
+                await setDoc(doc(db, "brackets", tournamentId), {
+                    tournamentId: tournamentId,
+                    matches: matches,
+                    generatedAt: new Date().toISOString()
+                });
+
+                alert(`Success! Generated Round 1 with ${matches.length} matches.`);
+
+            } catch (error) {
+                alert("Error generating bracket: " + error.message);
+                console.error(error);
+            }
+        };
+
+        // ==========================================
+        // 5. USER AUDIT LOGIC
         // ==========================================
         async function loadUsers() {
             const tbody = document.getElementById('userTableBody'); tbody.innerHTML = "";
