@@ -225,7 +225,12 @@
                     if (data.ownerUid === currentUserId) {
                         hasRegistered = true;
                     }
-                    if (data.teamName.toLowerCase() === tName.toLowerCase()) {
+                    
+                    // BUG FIX: Strict Regex Normalization to prevent whitespace bypass
+                    const normalizedExistingName = data.teamName.replace(/\s+/g, ' ').trim().toLowerCase();
+                    const normalizedNewName = tName.replace(/\s+/g, ' ').trim().toLowerCase();
+                    
+                    if (normalizedExistingName === normalizedNewName) {
                         nameTaken = true;
                     }
                 });
