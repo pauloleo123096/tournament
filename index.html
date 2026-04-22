@@ -8,7 +8,7 @@
         :root { 
             --lvlup-bg: #0a0f16; --lvlup-panel: #131c28; 
             --lvlup-accent: #00ffcc; --lvlup-text: #f8fafc; 
-            --lvlup-text-muted: #64748b; 
+            --lvlup-text-muted: #64748b; --lvlup-danger: #ef4444;
         }
 
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--lvlup-bg); color: var(--lvlup-text); margin: 0; padding: 0; }
@@ -26,9 +26,16 @@
 
         /* Main Content Grid */
         .container { max-width: 1200px; margin: 40px auto; padding: 0 20px; }
-        .section-title { font-size: 24px; border-bottom: 2px solid #1e293b; padding-bottom: 10px; margin-bottom: 30px; }
+        .section-title { font-size: 24px; border-bottom: 2px solid #1e293b; padding-bottom: 10px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-end;}
+        .section-title span { font-size: 14px; color: var(--lvlup-danger); text-transform: uppercase; font-weight: bold; letter-spacing: 1px;}
         
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 30px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 30px; margin-bottom: 60px;}
+        
+        /* Stream Card (RESTORED) */
+        .stream-card { background: var(--lvlup-panel); border: 1px solid #ef4444; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        .video-container { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; }
+        .video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
+        .stream-info { padding: 15px; text-align: center; font-weight: bold; font-size: 18px; color: var(--lvlup-text); background: #0f172a;}
         
         /* Tournament Card */
         .card { background: var(--lvlup-panel); border: 1px solid #1e293b; border-radius: 12px; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); display: flex; flex-direction: column;}
@@ -36,7 +43,7 @@
         .card .date { color: var(--lvlup-accent); font-size: 14px; font-weight: bold; text-transform: uppercase; margin-bottom: 15px;}
         .card .desc { color: var(--lvlup-text-muted); font-size: 14px; line-height: 1.5; flex-grow: 1; margin-bottom: 20px;}
         
-        /* BASIC BRACKET WIDGET (Injected into Card) */
+        /* Basic Bracket Widget */
         .basic-bracket-widget { background: #0f172a; border-radius: 6px; padding: 10px; margin-bottom: 20px; border-left: 3px solid var(--lvlup-accent);}
         .widget-title { font-size: 11px; text-transform: uppercase; color: var(--lvlup-text-muted); font-weight: bold; margin-bottom: 8px;}
         .widget-match { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; border-bottom: 1px solid #1e293b;}
@@ -66,6 +73,12 @@
     </div>
 
     <div class="container">
+        
+        <h2 class="section-title">Live Broadcasts <span>• On Air</span></h2>
+        <div class="grid" id="streamGrid">
+            <p style="color: var(--lvlup-text-muted);">No live broadcasts at this time.</p>
+        </div>
+
         <h2 class="section-title">Active Events</h2>
         <div class="grid" id="eventsGrid">
             <p style="color: var(--lvlup-text-muted);">Scanning database for open tournaments...</p>
@@ -75,8 +88,7 @@
     <script type="module">
         import { db, auth } from './firebase-setup.js';
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        // IMPORT ADDED: query, where, orderBy for fetching data
-        import { collection, query, where, orderBy, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { collection, query, orderBy, getDocs, onSnapshot, doc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         // Auth state logic to change the Nav button contextually
         onAuthStateChanged(auth, (user) => {
@@ -90,31 +102,78 @@
             }
         });
 
+        // Helper function to convert raw YouTube links into Embed URLs
+        function extractVideoID(url) {
+            let regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            let match = url.match(regExp);
+            return (match && match[2].length === 11) ? match[2] : null;
+        }
+
+        // ==========================================
+        // FETCH AND RENDER LIVE STREAMS (RESTORED)
+        // ==========================================
+        async function loadStreams() {
+            const grid = document.getElementById('streamGrid');
+            try {
+                // Fetch all streams, order by newest
+                const q = query(collection(db, "streams"), orderBy("createdAt", "desc"));
+                const snapshot = await getDocs(q);
+
+                let hasActiveStreams = false;
+                grid.innerHTML = "";
+
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    
+                    // Local filter: skip if hidden by Admin
+                    if (data.isHidden) return;
+                    
+                    hasActiveStreams = true;
+                    const videoId = extractVideoID(data.streamUrl);
+                    const embedUrl = videoId ? `https://www.youtube.com/embed/${videoId}` : data.streamUrl;
+
+                    grid.innerHTML += `
+                        <div class="stream-card">
+                            <div class="video-container">
+                                <iframe src="${embedUrl}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                            </div>
+                            <div class="stream-info">${data.teamA} vs ${data.teamB}</div>
+                        </div>
+                    `;
+                });
+
+                if (!hasActiveStreams) {
+                    grid.innerHTML = `<p style="color: var(--lvlup-text-muted);">No live broadcasts at this time.</p>`;
+                }
+
+            } catch (error) {
+                console.error("Stream Load Error:", error);
+            }
+        }
+
         // ==========================================
         // FETCH AND RENDER STOREFRONT EVENTS
         // ==========================================
-        async function loadStorefront() {
+        async function loadTournaments() {
             const grid = document.getElementById('eventsGrid');
             try {
-                // Fetch tournaments that are NOT hidden by the Admin
-                const q = query(collection(db, "tournaments"), where("isHidden", "==", false));
+                // BUG PATCH: Fetch all tournaments without the 'where' clause to avoid indexing issues with missing fields
+                const q = query(collection(db, "tournaments"), orderBy("createdAt", "desc"));
                 const snapshot = await getDocs(q);
 
+                let hasActiveEvents = false;
                 grid.innerHTML = "";
 
-                if (snapshot.empty) {
-                    grid.innerHTML = `<p style="color: var(--lvlup-text-muted);">No active tournaments available at this time. Check back later.</p>`;
-                    return;
-                }
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    const tId = docSnap.id;
 
-                // Sort newest first manually to avoid complex Firestore indexes
-                let eventsArray = [];
-                snapshot.forEach(docSnap => eventsArray.push({ id: docSnap.id, ...docSnap.data() }));
-                eventsArray.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-                eventsArray.forEach(data => {
-                    const tId = data.id;
+                    // Local filter: skip ONLY if it is explicitly set to hidden=true. 
+                    // If isHidden is missing/undefined (older data), it will correctly display.
+                    if (data.isHidden === true) return;
                     
+                    hasActiveEvents = true;
+
                     // Build the base card layout
                     const card = document.createElement('div');
                     card.className = "card";
@@ -132,17 +191,13 @@
                     `;
                     grid.appendChild(card);
 
-                    // ==========================================
-                    // BASIC BRACKET WIDGET INJECTION
-                    // ==========================================
-                    // After creating the card, we attach a real-time listener to see if a bracket exists for this event
+                    // Basic Bracket Widget Injection Logic
                     onSnapshot(doc(db, "brackets", tId), (bracketSnap) => {
                         const widgetContainer = document.getElementById(`widget-${tId}`);
                         
-                        if (bracketSnap.exists() && bracketSnap.data().matches) {
+                        if (bracketSnap.exists() && bracketSnap.data().matches && bracketSnap.data().matches.length > 0) {
                             const matches = bracketSnap.data().matches;
                             
-                            // We will only display up to 3 matches on the homepage to keep it clean (The "Basic" view)
                             let widgetHtml = `<div class="basic-bracket-widget">
                                                 <div class="widget-title">Live Matchups Preview</div>`;
                             
@@ -152,7 +207,7 @@
                                 widgetHtml += `
                                     <div class="widget-match">
                                         <span>${m.team1 || "TBD"} vs ${m.team2 || "TBD"}</span>
-                                        <span style="color:var(--lvlup-accent)">${m.round}</span>
+                                        <span style="color:var(--lvlup-accent)">${m.round || "Match"}</span>
                                     </div>
                                 `;
                             }
@@ -164,18 +219,23 @@
                             widgetHtml += `</div>`;
                             widgetContainer.innerHTML = widgetHtml;
                         } else {
-                            // If no bracket exists yet, clear the widget area
                             widgetContainer.innerHTML = "";
                         }
                     });
                 });
+
+                if (!hasActiveEvents) {
+                    grid.innerHTML = `<p style="color: var(--lvlup-text-muted);">No active tournaments available at this time. Check back later.</p>`;
+                }
 
             } catch (error) {
                 grid.innerHTML = `<p style="color: #ef4444;">Error loading events: ${error.message}</p>`;
             }
         }
 
-        loadStorefront();
+        // Initialize Data
+        loadStreams();
+        loadTournaments();
     </script>
 </body>
 </html>
