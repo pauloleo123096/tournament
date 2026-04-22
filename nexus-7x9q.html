@@ -41,7 +41,6 @@
         .btn-action { background: transparent; border: 1px solid var(--lvlup-edit); color: var(--lvlup-edit); padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; margin-right: 5px; margin-bottom: 5px;}
         .btn-action:hover { background: var(--lvlup-edit); color: #000; }
 
-        /* NEW: Generate Bracket Button */
         .btn-generate { background: rgba(0, 255, 204, 0.1); border: 1px solid var(--lvlup-accent); color: var(--lvlup-accent); padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; margin-right: 5px; margin-bottom: 5px;}
         .btn-generate:hover { background: var(--lvlup-accent); color: #000; }
 
@@ -69,6 +68,25 @@
 
         <div class="grid-layout">
             <div>
+                <div class="panel" style="border-color: #f59e0b;">
+                    <h2 style="margin-top: 0; color: #f59e0b;">God-Mode Match Builder</h2>
+                    <p style="font-size: 12px; color: var(--lvlup-text-muted); margin-top: -10px;">Manually inject matches into a tournament bracket.</p>
+                    
+                    <select id="manualMatchEvent">
+                        <option value="">1. Select Tournament</option>
+                    </select>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <select id="manualTeamA"><option value="">Team A</option></select>
+                        <select id="manualTeamB"><option value="">Team B</option></select>
+                    </div>
+                    
+                    <input type="text" id="manualMatchRound" placeholder="Round (e.g. Round 1, Semi-Finals)">
+                    
+                    <button class="btn-primary" style="background: #f59e0b; color: #000;" id="pushManualMatchBtn">Push Manual Match</button>
+                    <div id="manualMatchMsg" style="font-size: 14px; margin-top: 10px;"></div>
+                </div>
+
                 <div class="panel" style="border-color: #ef4444;">
                     <h2 style="margin-top: 0; color: #ef4444;">Deploy Broadcast</h2>
                     <input type="text" id="bcTeamA" placeholder="Team A Name">
@@ -120,22 +138,22 @@
                 </div>
 
                 <div class="panel">
-                    <h2 style="margin-top: 0; color: #ef4444;">Broadcast Management</h2>
-                    <table>
-                        <thead>
-                            <tr><th>Matchup</th><th>Visibility</th><th>Action</th></tr>
-                        </thead>
-                        <tbody id="streamTableBody"><tr><td colspan="3">Loading...</td></tr></tbody>
-                    </table>
-                </div>
-
-                <div class="panel">
                     <h2>Event Management</h2>
                     <table>
                         <thead>
                             <tr><th>Tournament</th><th>Status</th><th>Visibility</th><th>Action</th></tr>
                         </thead>
                         <tbody id="tourneyTableBody"><tr><td colspan="4">Loading...</td></tr></tbody>
+                    </table>
+                </div>
+
+                <div class="panel">
+                    <h2 style="margin-top: 0; color: #ef4444;">Broadcast Management</h2>
+                    <table>
+                        <thead>
+                            <tr><th>Matchup</th><th>Visibility</th><th>Action</th></tr>
+                        </thead>
+                        <tbody id="streamTableBody"><tr><td colspan="3">Loading...</td></tr></tbody>
                     </table>
                 </div>
 
@@ -179,7 +197,93 @@
         });
 
         // ==========================================
-        // 1. TEAM APPROVAL & FILTER LOGIC
+        // 1. GOD-MODE MATCH BUILDER LOGIC (NEW)
+        // ==========================================
+        const manualEventDropdown = document.getElementById('manualMatchEvent');
+        const teamADropdown = document.getElementById('manualTeamA');
+        const teamBDropdown = document.getElementById('manualTeamB');
+
+        // When a tournament is selected in the manual builder, fetch its APPROVED teams.
+        manualEventDropdown.addEventListener('change', async (e) => {
+            const tourneyId = e.target.value;
+            teamADropdown.innerHTML = '<option value="">Team A</option>';
+            teamBDropdown.innerHTML = '<option value="">Team B</option>';
+            
+            if(!tourneyId) return;
+
+            try {
+                // Fetch only approved teams to prevent generating matches with disqualified squads.
+                const q = query(collection(db, "teams"), where("tournamentId", "==", tourneyId), where("status", "==", "Approved"));
+                const snap = await getDocs(q);
+                
+                snap.forEach(docSnap => {
+                    const data = docSnap.data();
+                    const optionHtml = `<option value="${docSnap.id}">${data.teamName}</option>`;
+                    teamADropdown.innerHTML += optionHtml;
+                    teamBDropdown.innerHTML += optionHtml;
+                });
+                teamBDropdown.innerHTML += `<option value="bye">BYE (Auto-Advance)</option>`;
+            } catch (error) {
+                console.error("Error loading teams for God Mode:", error);
+            }
+        });
+
+        document.getElementById('pushManualMatchBtn').addEventListener('click', async () => {
+            const tourneyId = manualEventDropdown.value;
+            const tA_Id = teamADropdown.value;
+            const tA_Name = teamADropdown.options[teamADropdown.selectedIndex].text;
+            const tB_Id = teamBDropdown.value;
+            const tB_Name = teamBDropdown.options[teamBDropdown.selectedIndex].text;
+            const roundText = document.getElementById('manualMatchRound').value;
+            const msg = document.getElementById('manualMatchMsg');
+
+            if (!tourneyId || !tA_Id || !tB_Id || !roundText) {
+                msg.style.color = "red"; msg.innerText = "All fields required."; return;
+            }
+            if (tA_Id === tB_Id) {
+                msg.style.color = "red"; msg.innerText = "A team cannot play itself."; return;
+            }
+
+            try {
+                msg.style.color = "#f59e0b"; msg.innerText = "Injecting Match...";
+                const bracketRef = doc(db, "brackets", tourneyId);
+                const bracketSnap = await getDoc(bracketRef);
+                
+                let matches = [];
+                // If a bracket exists, append to it. If not, start a new array.
+                if (bracketSnap.exists()) {
+                    matches = bracketSnap.data().matches || [];
+                }
+
+                // Generate a unique match ID based on the array length
+                const newMatchId = matches.length > 0 ? Math.max(...matches.map(m => m.matchId)) + 1 : 1;
+
+                matches.push({
+                    matchId: newMatchId,
+                    round: roundText,
+                    team1: tA_Name,
+                    team1Id: tA_Id,
+                    team2: tB_Name,
+                    team2Id: tB_Id,
+                    winner: null,
+                    score: ""
+                });
+
+                // Use {merge: true} to avoid overwriting other tournament data if it exists.
+                await setDoc(bracketRef, { tournamentId: tourneyId, matches: matches, lastUpdated: new Date().toISOString() }, { merge: true });
+
+                msg.style.color = "var(--lvlup-success)"; msg.innerText = "Match successfully injected!";
+                document.getElementById('manualMatchRound').value = ""; // Clear text input
+                setTimeout(() => msg.innerText = "", 3000);
+
+            } catch (error) {
+                msg.style.color = "red"; msg.innerText = "Database Error: " + error.message;
+            }
+        });
+
+
+        // ==========================================
+        // 2. TEAM APPROVAL & FILTER LOGIC
         // ==========================================
         document.getElementById('teamFilterDropdown').addEventListener('change', (e) => {
             loadTeams(e.target.value);
@@ -228,14 +332,155 @@
                 });
             });
         }
-        
-        window.updateTeamStatus = async (id, newStatus) => {
-            await updateDoc(doc(db, "teams", id), { status: newStatus });
-        };
+        window.updateTeamStatus = async (id, newStatus) => { await updateDoc(doc(db, "teams", id), { status: newStatus }); };
 
 
         // ==========================================
-        // 2. STREAM CMS LOGIC
+        // 3. TOURNAMENT CMS LOGIC
+        // ==========================================
+        document.getElementById('saveTournamentBtn').addEventListener('click', async () => {
+            const id = document.getElementById('tId').value; const title = document.getElementById('tTitle').value; const date = document.getElementById('tDate').value; const prize = document.getElementById('tPrize').value; const status = document.getElementById('tStatus').value; const desc = document.getElementById('tDesc').value; const msg = document.getElementById('tMessage');
+            if (!title || !date) { msg.style.color = "red"; msg.innerText = "Title and Date required."; return; }
+            msg.style.color = "var(--lvlup-accent)"; msg.innerText = "Processing...";
+            try {
+                if (isEditMode) {
+                    await updateDoc(doc(db, "tournaments", id), { title, date, prizePool: prize, status, description: desc });
+                    msg.innerText = "Event Updated!"; exitEditMode();
+                } else {
+                    await addDoc(collection(db, "tournaments"), { title, date, prizePool: prize, status, description: desc, isHidden: false, createdAt: new Date().toISOString() });
+                    msg.innerText = "Event Deployed!"; clearForm();
+                }
+                setTimeout(() => msg.innerText = "", 3000);
+            } catch (e) { msg.style.color = "red"; msg.innerText = "Error: " + e.message; }
+        });
+
+        // Pulls tournaments and populates all THREE dropdowns (Filter, MatchBuilder, Stream)
+        function loadTournaments() {
+            onSnapshot(query(collection(db, "tournaments"), orderBy("createdAt", "desc")), (snapshot) => {
+                const tbody = document.getElementById('tourneyTableBody'); 
+                const filterDropdown = document.getElementById('teamFilterDropdown');
+                const manualEventSelect = document.getElementById('manualMatchEvent'); // God-Mode Dropdown
+                
+                const currentFilter = filterDropdown.value; 
+                const currentManual = manualEventSelect.value;
+                
+                tbody.innerHTML = "";
+                filterDropdown.innerHTML = '<option value="all">View All Events</option>'; 
+                manualEventSelect.innerHTML = '<option value="">1. Select Tournament</option>';
+
+                snapshot.forEach((docSnap) => {
+                    const data = docSnap.data(); const id = docSnap.id;
+                    
+                    tbody.innerHTML += `
+                        <tr>
+                            <td><strong>${data.title}</strong><br><span style="font-size: 11px;">${data.date}</span></td>
+                            <td>${data.status}</td>
+                            <td>${data.isHidden ? "<span style='color:red;'>Hidden</span>" : "<span style='color:#00ffcc;'>Public</span>"}</td>
+                            <td>
+                                <button class="btn-generate" onclick="generateBracket('${id}')">Build Bracket</button>
+                                <br>
+                                <button class="btn-action" onclick="editEvent('${id}', '${data.title.replace(/'/g, "\\'")}', '${data.date}', '${data.prizePool || ''}', '${data.status}', '${(data.description || '').replace(/'/g, "\\'").replace(/\n/g, "\\n")}')">Edit</button>
+                                <button class="btn-secondary" onclick="toggleVis('${id}', ${data.isHidden})">${data.isHidden ? "Unhide" : "Hide"}</button>
+                                <button class="btn-danger" onclick="delEvent('${id}')">Purge</button>
+                            </td>
+                        </tr>
+                    `;
+                    
+                    const optionHtml = `<option value="${id}">${data.title}</option>`;
+                    filterDropdown.innerHTML += optionHtml;
+                    manualEventSelect.innerHTML += optionHtml;
+                });
+
+                // Restore previous selections
+                if(currentFilter !== "all" && filterDropdown.querySelector(`option[value="${currentFilter}"]`)) filterDropdown.value = currentFilter;
+                if(currentManual !== "" && manualEventSelect.querySelector(`option[value="${currentManual}"]`)) manualEventSelect.value = currentManual;
+            });
+        }
+
+        window.editEvent = (id, title, date, prize, status, desc) => {
+            isEditMode = true; document.getElementById('formTitle').innerText = "Update Event Data"; document.getElementById('formTitle').style.color = "var(--lvlup-edit)"; document.getElementById('saveTournamentBtn').innerText = "Submit Update"; document.getElementById('saveTournamentBtn').classList.add("btn-edit-mode"); document.getElementById('cancelEditBtn').style.display = "block";
+            document.getElementById('tId').value = id; document.getElementById('tTitle').value = title; document.getElementById('tDate').value = date; document.getElementById('tPrize').value = prize; document.getElementById('tStatus').value = status; document.getElementById('tDesc').value = desc; window.scrollTo(0, 0);
+        }
+        
+        document.getElementById('cancelEditBtn').addEventListener('click', exitEditMode);
+        function exitEditMode() {
+            isEditMode = false; document.getElementById('formTitle').innerText = "Deploy Tournament"; document.getElementById('formTitle').style.color = "var(--lvlup-accent)"; document.getElementById('saveTournamentBtn').innerText = "Initialize Event"; document.getElementById('saveTournamentBtn').classList.remove("btn-edit-mode"); document.getElementById('cancelEditBtn').style.display = "none"; clearForm();
+        }
+        function clearForm() {
+            document.getElementById('tId').value = ''; document.getElementById('tTitle').value = ''; document.getElementById('tDate').value = ''; document.getElementById('tPrize').value = ''; document.getElementById('tDesc').value = '';
+        }
+        window.toggleVis = async (id, isHidden) => await updateDoc(doc(db, "tournaments", id), { isHidden: !isHidden });
+        
+        window.delEvent = async (id) => { 
+            if(confirm("CRITICAL WARNING: Permanently delete this event AND wipe all teams registered for it? This cannot be undone.")) {
+                const q = query(collection(db, "teams"), where("tournamentId", "==", id));
+                const teamSnaps = await getDocs(q);
+                const deletePromises = [];
+                teamSnaps.forEach(docSnap => { deletePromises.push(deleteDoc(doc(db, "teams", docSnap.id))); });
+                await Promise.all(deletePromises); 
+                await deleteDoc(doc(db, "tournaments", id)); 
+            } 
+        }
+
+        // ==========================================
+        // 4. AUTO BRACKET GENERATOR LOGIC
+        // ==========================================
+        window.generateBracket = async (tournamentId) => {
+            if(!confirm("Generate Bracket? This will overwrite any existing bracket for this tournament and pull ONLY 'Approved' teams.")) return;
+
+            try {
+                const q = query(collection(db, "teams"), where("tournamentId", "==", tournamentId), where("status", "==", "Approved"));
+                const snapshot = await getDocs(q);
+                
+                let teams = [];
+                snapshot.forEach(docSnap => teams.push({ id: docSnap.id, name: docSnap.data().teamName }));
+
+                if (teams.length < 2) {
+                    alert("Error: You need at least 2 Approved teams to generate a bracket.");
+                    return;
+                }
+
+                // Fisher-Yates Shuffle
+                for (let i = teams.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [teams[i], teams[j]] = [teams[j], teams[i]];
+                }
+
+                let matches = [];
+                let matchIdCounter = 1;
+                
+                for (let i = 0; i < teams.length; i += 2) {
+                    let team1 = teams[i];
+                    let team2 = teams[i + 1] ? teams[i + 1] : { id: "bye", name: "BYE" }; 
+                    
+                    matches.push({
+                        matchId: matchIdCounter++,
+                        round: "Round 1",
+                        team1: team1.name,
+                        team1Id: team1.id,
+                        team2: team2.name,
+                        team2Id: team2.id,
+                        winner: null,
+                        score: ""
+                    });
+                }
+
+                await setDoc(doc(db, "brackets", tournamentId), {
+                    tournamentId: tournamentId,
+                    matches: matches,
+                    generatedAt: new Date().toISOString()
+                }, { merge: true });
+
+                alert(`Success! Generated Round 1 with ${matches.length} matches.`);
+
+            } catch (error) {
+                alert("Error generating bracket: " + error.message);
+                console.error(error);
+            }
+        };
+
+        // ==========================================
+        // 5. STREAM CMS LOGIC
         // ==========================================
         document.getElementById('saveStreamBtn').addEventListener('click', async () => {
             const tA = document.getElementById('bcTeamA').value;
@@ -274,147 +519,7 @@
 
 
         // ==========================================
-        // 3. TOURNAMENT CMS LOGIC
-        // ==========================================
-        document.getElementById('saveTournamentBtn').addEventListener('click', async () => {
-            const id = document.getElementById('tId').value; const title = document.getElementById('tTitle').value; const date = document.getElementById('tDate').value; const prize = document.getElementById('tPrize').value; const status = document.getElementById('tStatus').value; const desc = document.getElementById('tDesc').value; const msg = document.getElementById('tMessage');
-            if (!title || !date) { msg.style.color = "red"; msg.innerText = "Title and Date required."; return; }
-            msg.style.color = "var(--lvlup-accent)"; msg.innerText = "Processing...";
-            try {
-                if (isEditMode) {
-                    await updateDoc(doc(db, "tournaments", id), { title, date, prizePool: prize, status, description: desc });
-                    msg.innerText = "Event Updated!"; exitEditMode();
-                } else {
-                    await addDoc(collection(db, "tournaments"), { title, date, prizePool: prize, status, description: desc, isHidden: false, createdAt: new Date().toISOString() });
-                    msg.innerText = "Event Deployed!"; clearForm();
-                }
-                setTimeout(() => msg.innerText = "", 3000);
-            } catch (e) { msg.style.color = "red"; msg.innerText = "Error: " + e.message; }
-        });
-
-        function loadTournaments() {
-            onSnapshot(query(collection(db, "tournaments"), orderBy("createdAt", "desc")), (snapshot) => {
-                const tbody = document.getElementById('tourneyTableBody'); 
-                const filterDropdown = document.getElementById('teamFilterDropdown');
-                const currentFilter = filterDropdown.value; 
-                
-                tbody.innerHTML = "";
-                filterDropdown.innerHTML = '<option value="all">View All Events</option>'; 
-
-                snapshot.forEach((docSnap) => {
-                    const data = docSnap.data(); const id = docSnap.id;
-                    
-                    // NEW: Generate Bracket Button Added to UI
-                    tbody.innerHTML += `
-                        <tr>
-                            <td><strong>${data.title}</strong><br><span style="font-size: 11px;">${data.date}</span></td>
-                            <td>${data.status}</td>
-                            <td>${data.isHidden ? "<span style='color:red;'>Hidden</span>" : "<span style='color:#00ffcc;'>Public</span>"}</td>
-                            <td>
-                                <button class="btn-generate" onclick="generateBracket('${id}')">Build Bracket</button>
-                                <br>
-                                <button class="btn-action" onclick="editEvent('${id}', '${data.title.replace(/'/g, "\\'")}', '${data.date}', '${data.prizePool || ''}', '${data.status}', '${(data.description || '').replace(/'/g, "\\'").replace(/\n/g, "\\n")}')">Edit</button>
-                                <button class="btn-secondary" onclick="toggleVis('${id}', ${data.isHidden})">${data.isHidden ? "Unhide" : "Hide"}</button>
-                                <button class="btn-danger" onclick="delEvent('${id}')">Purge</button>
-                            </td>
-                        </tr>
-                    `;
-                    filterDropdown.innerHTML += `<option value="${id}">${data.title}</option>`;
-                });
-
-                if(currentFilter !== "all" && filterDropdown.querySelector(`option[value="${currentFilter}"]`)) {
-                    filterDropdown.value = currentFilter;
-                }
-            });
-        }
-
-        window.editEvent = (id, title, date, prize, status, desc) => {
-            isEditMode = true; document.getElementById('formTitle').innerText = "Update Event Data"; document.getElementById('formTitle').style.color = "var(--lvlup-edit)"; document.getElementById('saveTournamentBtn').innerText = "Submit Update"; document.getElementById('saveTournamentBtn').classList.add("btn-edit-mode"); document.getElementById('cancelEditBtn').style.display = "block";
-            document.getElementById('tId').value = id; document.getElementById('tTitle').value = title; document.getElementById('tDate').value = date; document.getElementById('tPrize').value = prize; document.getElementById('tStatus').value = status; document.getElementById('tDesc').value = desc; window.scrollTo(0, 0);
-        }
-        
-        document.getElementById('cancelEditBtn').addEventListener('click', exitEditMode);
-        function exitEditMode() {
-            isEditMode = false; document.getElementById('formTitle').innerText = "Deploy Tournament"; document.getElementById('formTitle').style.color = "var(--lvlup-accent)"; document.getElementById('saveTournamentBtn').innerText = "Initialize Event"; document.getElementById('saveTournamentBtn').classList.remove("btn-edit-mode"); document.getElementById('cancelEditBtn').style.display = "none"; clearForm();
-        }
-        function clearForm() {
-            document.getElementById('tId').value = ''; document.getElementById('tTitle').value = ''; document.getElementById('tDate').value = ''; document.getElementById('tPrize').value = ''; document.getElementById('tDesc').value = '';
-        }
-        window.toggleVis = async (id, isHidden) => await updateDoc(doc(db, "tournaments", id), { isHidden: !isHidden });
-        
-        window.delEvent = async (id) => { 
-            if(confirm("CRITICAL WARNING: Permanently delete this event AND wipe all teams registered for it? This cannot be undone.")) {
-                const q = query(collection(db, "teams"), where("tournamentId", "==", id));
-                const teamSnaps = await getDocs(q);
-                const deletePromises = [];
-                teamSnaps.forEach(docSnap => { deletePromises.push(deleteDoc(doc(db, "teams", docSnap.id))); });
-                await Promise.all(deletePromises); 
-                await deleteDoc(doc(db, "tournaments", id)); 
-            } 
-        }
-
-        // ==========================================
-        // 4. BRACKET GENERATOR LOGIC (PHASE 4)
-        // ==========================================
-        window.generateBracket = async (tournamentId) => {
-            if(!confirm("Generate Bracket? This will overwrite any existing bracket for this tournament and pull ONLY 'Approved' teams.")) return;
-
-            try {
-                // 1. Fetch only approved teams for this tournament
-                const q = query(collection(db, "teams"), where("tournamentId", "==", tournamentId), where("status", "==", "Approved"));
-                const snapshot = await getDocs(q);
-                
-                let teams = [];
-                snapshot.forEach(docSnap => teams.push({ id: docSnap.id, name: docSnap.data().teamName }));
-
-                if (teams.length < 2) {
-                    alert("Error: You need at least 2 Approved teams to generate a bracket.");
-                    return;
-                }
-
-                // 2. Fisher-Yates Shuffle Algorithm (Randomize seeds)
-                for (let i = teams.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [teams[i], teams[j]] = [teams[j], teams[i]];
-                }
-
-                // 3. Pair teams up for Round 1
-                let matches = [];
-                let matchIdCounter = 1;
-                
-                for (let i = 0; i < teams.length; i += 2) {
-                    let team1 = teams[i];
-                    let team2 = teams[i + 1] ? teams[i + 1] : { id: "bye", name: "BYE" }; // If odd number of teams, grant a BYE
-                    
-                    matches.push({
-                        matchId: matchIdCounter++,
-                        round: 1,
-                        team1: team1.name,
-                        team1Id: team1.id,
-                        team2: team2.name,
-                        team2Id: team2.id,
-                        winner: null,
-                        score: ""
-                    });
-                }
-
-                // 4. Save the generated bracket structure to Firebase, using the tournamentId as the document ID
-                await setDoc(doc(db, "brackets", tournamentId), {
-                    tournamentId: tournamentId,
-                    matches: matches,
-                    generatedAt: new Date().toISOString()
-                });
-
-                alert(`Success! Generated Round 1 with ${matches.length} matches.`);
-
-            } catch (error) {
-                alert("Error generating bracket: " + error.message);
-                console.error(error);
-            }
-        };
-
-        // ==========================================
-        // 5. USER AUDIT LOGIC
+        // 6. USER AUDIT LOGIC
         // ==========================================
         async function loadUsers() {
             const tbody = document.getElementById('userTableBody'); tbody.innerHTML = "";
