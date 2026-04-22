@@ -74,14 +74,17 @@
 
     <script type="module">
         import { db, auth } from './firebase-setup.js';
-        import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        // IMPORT ADDED: getDoc and updateDoc for safe Admin handling
+        import { doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
+        // --- URL PRESERVATION ---
         const urlParams = new URLSearchParams(window.location.search);
         const urlId = urlParams.get('id');
 
         onAuthStateChanged(auth, (user) => { 
             if (user) {
+                // If logged in, send them to reg page if ID exists, else dashboard
                 window.location.replace(urlId ? `register.html?id=${urlId}` : "dashboard.html");
             } 
         });
@@ -89,7 +92,7 @@
         let isLogin = true;
         const msg = document.getElementById('errMsg');
 
-        // UI Toggles
+        // --- UI TOGGLES (No changes here) ---
         document.getElementById('toggleLink').addEventListener('click', () => {
             isLogin = !isLogin;
             document.getElementById('formTitle').innerText = isLogin ? "Captain Login" : "Create Captain Account";
@@ -116,6 +119,30 @@
             msg.innerText = "";
         });
 
+        // ==========================================
+        // BUG PATCH 1: THE ADMIN LOCKOUT FIX
+        // ==========================================
+        // This function safely checks if a user exists BEFORE creating their profile
+        // If they exist (like your Admin account), it ONLY updates the login timestamp.
+        async function safelyHandleUserProfile(user, providedName) {
+            const userRef = doc(db, "users", user.uid);
+            const userSnap = await getDoc(userRef);
+            
+            if (!userSnap.exists()) {
+                // First time logging in? Create their Captain profile.
+                await setDoc(userRef, { 
+                    email: user.email, 
+                    name: providedName || user.displayName || "Captain", 
+                    role: "captain", 
+                    createdAt: new Date().toISOString(),
+                    lastLogin: new Date().toISOString()
+                });
+            } else {
+                // Existing user? Just update the timestamp. DO NOT touch the role.
+                await updateDoc(userRef, { lastLogin: new Date().toISOString() });
+            }
+        }
+
         // --- GOOGLE AUTHENTICATION ---
         const provider = new GoogleAuthProvider();
         document.getElementById('googleLoginBtn').addEventListener('click', async () => {
@@ -124,13 +151,7 @@
 
             try {
                 const result = await signInWithPopup(auth, provider);
-                const user = result.user;
-                await setDoc(doc(db, "users", user.uid), { 
-                    email: user.email, 
-                    name: user.displayName || "Captain", 
-                    role: "captain", 
-                    lastLogin: new Date().toISOString()
-                }, { merge: true });
+                await safelyHandleUserProfile(result.user, null); // Call the safe function
             } catch (e) { 
                 googleBtn.disabled = false; googleBtn.style.opacity = "1";
                 msg.innerText = "Google Error: " + e.message.replace("Firebase: ", ""); 
@@ -147,13 +168,14 @@
             btnLoadingState(true);
             try {
                 if (isLogin) {
-                    await signInWithEmailAndPassword(auth, email, pass);
+                    const creds = await signInWithEmailAndPassword(auth, email, pass);
+                    await safelyHandleUserProfile(creds.user, null); // Update login stamp
                 } else {
                     if (!name) { btnLoadingState(false); return msg.innerText = "Name is required for registration."; }
                     if (pass.length < 6) { btnLoadingState(false); return msg.innerText = "Password must be at least 6 characters."; }
+                    
                     const creds = await createUserWithEmailAndPassword(auth, email, pass);
-                    await setDoc(doc(db, "users", creds.user.uid), { email, name, role: "captain", createdAt: new Date().toISOString() });
-                    await sendEmailVerification(creds.user);
+                    await safelyHandleUserProfile(creds.user, name); // Create new profile
                 }
             } catch (e) { 
                 btnLoadingState(false);
@@ -161,6 +183,7 @@
             }
         });
 
+        // --- RESET PASSWORD ---
         document.getElementById('sendResetBtn').addEventListener('click', async () => {
             const email = document.getElementById('resetEmail').value;
             if(!email) return msg.innerText = "Provide an email address.";
