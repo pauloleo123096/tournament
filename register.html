@@ -189,7 +189,9 @@
 
         const isValidString = (str) => str.replace(/\s/g, '').length >= 3;
 
-        // --- SUBMISSION & DUPLICATE CHECKS ---
+        // ==========================================
+        // SUBMISSION & DUPLICATE CHECKS
+        // ==========================================
         document.getElementById('submitTeamBtn').addEventListener('click', async () => {
             if(!targetTourneyId) return alert("Please select a tournament first.");
 
@@ -209,20 +211,33 @@
             btn.disabled = true;
 
             try {
-                // BUG PATCH 2A: Check if the CAPTAIN already registered for this event
-                const captainQuery = query(collection(db, "teams"), where("ownerUid", "==", currentUserId), where("tournamentId", "==", targetTourneyId));
-                const capSnap = await getDocs(captainQuery);
-                if (!capSnap.empty) {
+                // THE FIX: Single query to fetch all teams for this tournament.
+                const tQuery = query(collection(db, "teams"), where("tournamentId", "==", targetTourneyId));
+                const snap = await getDocs(tQuery);
+                
+                let hasRegistered = false;
+                let nameTaken = false;
+
+                // Process the data in JS to avoid complex Firestore indexing
+                snap.forEach(docSnap => {
+                    const data = docSnap.data();
+                    
+                    if (data.ownerUid === currentUserId) {
+                        hasRegistered = true;
+                    }
+                    if (data.teamName.toLowerCase() === tName.toLowerCase()) {
+                        nameTaken = true;
+                    }
+                });
+
+                if (hasRegistered) {
                     alert("ACCESS DENIED: You have already registered a squad for this specific tournament under your account.");
                     btn.innerText = "Submit Roster to Tournament";
                     btn.disabled = false;
                     return;
                 }
 
-                // BUG PATCH 2B: Check if the TEAM NAME is already taken in this specific event by anyone else
-                const nameQuery = query(collection(db, "teams"), where("tournamentId", "==", targetTourneyId), where("teamName", "==", tName));
-                const nameSnap = await getDocs(nameQuery);
-                if (!nameSnap.empty) {
+                if (nameTaken) {
                     alert(`ACCESS DENIED: The team name "${tName}" has already been claimed for this tournament! Please choose a different name.`);
                     btn.innerText = "Submit Roster to Tournament";
                     btn.disabled = false;
