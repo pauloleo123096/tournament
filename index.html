@@ -31,7 +31,7 @@
         
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 30px; margin-bottom: 60px;}
         
-        /* Stream Card (RESTORED) */
+        /* Stream Card */
         .stream-card { background: var(--lvlup-panel); border: 1px solid #ef4444; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
         .video-container { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; }
         .video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
@@ -40,9 +40,14 @@
         /* Tournament Card */
         .card { background: var(--lvlup-panel); border: 1px solid #1e293b; border-radius: 12px; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); display: flex; flex-direction: column;}
         .card h3 { margin: 0 0 5px 0; font-size: 22px; color: var(--lvlup-text); }
-        .card .date { color: var(--lvlup-accent); font-size: 14px; font-weight: bold; text-transform: uppercase; margin-bottom: 15px;}
+        .card .date { color: var(--lvlup-text-muted); font-size: 14px; font-weight: bold; text-transform: uppercase; margin-bottom: 15px;}
         .card .desc { color: var(--lvlup-text-muted); font-size: 14px; line-height: 1.5; flex-grow: 1; margin-bottom: 20px;}
         
+        /* Status Colors */
+        .status-upcoming { color: #f59e0b; }
+        .status-live { color: #10b981; }
+        .status-completed { color: #ef4444; }
+
         /* Basic Bracket Widget */
         .basic-bracket-widget { background: #0f172a; border-radius: 6px; padding: 10px; margin-bottom: 20px; border-left: 3px solid var(--lvlup-accent);}
         .widget-title { font-size: 11px; text-transform: uppercase; color: var(--lvlup-text-muted); font-weight: bold; margin-bottom: 8px;}
@@ -62,6 +67,7 @@
     <nav>
         <a href="index.html" class="logo">LVLUP</a>
         <div class="nav-links">
+            <a href="hub.html" style="color: var(--lvlup-danger);">Live Hub</a>
             <a href="login.html" id="navLoginBtn">Captain Portal</a>
         </div>
     </nav>
@@ -90,7 +96,6 @@
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { collection, query, orderBy, getDocs, onSnapshot, doc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-        // Auth state logic to change the Nav button contextually
         onAuthStateChanged(auth, (user) => {
             const navBtn = document.getElementById('navLoginBtn');
             if (user) {
@@ -102,20 +107,15 @@
             }
         });
 
-        // Helper function to convert raw YouTube links into Embed URLs
         function extractVideoID(url) {
             let regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
             let match = url.match(regExp);
             return (match && match[2].length === 11) ? match[2] : null;
         }
 
-        // ==========================================
-        // FETCH AND RENDER LIVE STREAMS (RESTORED)
-        // ==========================================
         async function loadStreams() {
             const grid = document.getElementById('streamGrid');
             try {
-                // Fetch all streams, order by newest
                 const q = query(collection(db, "streams"), orderBy("createdAt", "desc"));
                 const snapshot = await getDocs(q);
 
@@ -124,8 +124,6 @@
 
                 snapshot.forEach(docSnap => {
                     const data = docSnap.data();
-                    
-                    // Local filter: skip if hidden by Admin
                     if (data.isHidden) return;
                     
                     hasActiveStreams = true;
@@ -151,13 +149,9 @@
             }
         }
 
-        // ==========================================
-        // FETCH AND RENDER STOREFRONT EVENTS
-        // ==========================================
         async function loadTournaments() {
             const grid = document.getElementById('eventsGrid');
             try {
-                // BUG PATCH: Fetch all tournaments without the 'where' clause to avoid indexing issues with missing fields
                 const q = query(collection(db, "tournaments"), orderBy("createdAt", "desc"));
                 const snapshot = await getDocs(q);
 
@@ -168,18 +162,19 @@
                     const data = docSnap.data();
                     const tId = docSnap.id;
 
-                    // Local filter: skip ONLY if it is explicitly set to hidden=true. 
-                    // If isHidden is missing/undefined (older data), it will correctly display.
                     if (data.isHidden === true) return;
-                    
                     hasActiveEvents = true;
 
-                    // Build the base card layout
+                    let statusClass = "status-upcoming";
+                    const rawStatus = (data.status || "").toLowerCase();
+                    if(rawStatus.includes("live")) statusClass = "status-live";
+                    if(rawStatus.includes("completed")) statusClass = "status-completed";
+
                     const card = document.createElement('div');
                     card.className = "card";
                     card.innerHTML = `
                         <h3>${data.title}</h3>
-                        <div class="date">${data.date} • ${data.status.toUpperCase()}</div>
+                        <div class="date">${data.date} • <span class="${statusClass}">${data.status.toUpperCase()}</span></div>
                         <div class="desc">${data.description || "No description provided."}</div>
                         
                         <div id="widget-${tId}"></div> 
@@ -191,7 +186,6 @@
                     `;
                     grid.appendChild(card);
 
-                    // Basic Bracket Widget Injection Logic
                     onSnapshot(doc(db, "brackets", tId), (bracketSnap) => {
                         const widgetContainer = document.getElementById(`widget-${tId}`);
                         
@@ -233,7 +227,6 @@
             }
         }
 
-        // Initialize Data
         loadStreams();
         loadTournaments();
     </script>
