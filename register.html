@@ -24,8 +24,8 @@
         .input-group { margin-bottom: 20px; }
         .input-group label { display: block; margin-bottom: 4px; color: #cbd5e1; font-weight: bold; }
         .input-group .helper-text { display: block; margin-bottom: 8px; font-size: 12px; color: var(--lvlup-text-muted); }
-        .input-group input { width: 100%; padding: 12px; background: #0f172a; border: 1px solid #1e293b; color: white; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
-        .input-group input:focus { outline: none; border-color: var(--lvlup-accent); }
+        .input-group input, .input-group select { width: 100%; padding: 12px; background: #0f172a; border: 1px solid #1e293b; color: white; border-radius: 6px; box-sizing: border-box; font-size: 16px; font-family: inherit;}
+        .input-group input:focus, .input-group select:focus { outline: none; border-color: var(--lvlup-accent); }
         
         .roster-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         
@@ -40,9 +40,15 @@
 <body>
 
     <div class="form-container" id="registrationForm">
+        
         <div class="target-banner" id="targetBanner">
             <span>Currently Enrolling For:</span>
-            <strong id="targetEventName">Loading Event Data...</strong>
+            <div id="targetDisplayContainer">
+                <strong id="targetEventName" style="display: none;">Loading Event Data...</strong>
+                <select id="targetTourneyDropdown" style="display: none; width: 100%; padding: 10px; margin-top: 5px; background: #1e293b; border: 1px solid var(--lvlup-accent); color: white; border-radius: 4px;">
+                    <option value="">Select an upcoming event...</option>
+                </select>
+            </div>
         </div>
 
         <div id="formBody">
@@ -73,7 +79,7 @@
 
     <script type="module">
         import { db, auth } from './firebase-setup.js';
-        import { collection, addDoc, doc, getDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { collection, addDoc, doc, getDoc, getDocs, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
         let currentUserId = null;
@@ -82,43 +88,91 @@
         
         const btn = document.getElementById('submitTeamBtn');
         const formBody = document.getElementById('formBody');
+        const eventNameLabel = document.getElementById('targetEventName');
+        const eventDropdown = document.getElementById('targetTourneyDropdown');
+        
         const urlParams = new URLSearchParams(window.location.search);
         const urlId = urlParams.get('id');
 
-        // --- TOURNAMENT VALIDATION ---
+        // ==========================================
+        // SMART TOURNAMENT ROUTING
+        // ==========================================
         async function fetchTargetTournament() {
-            if (!urlId) {
-                formBody.style.display = 'none';
-                document.getElementById('targetBanner').style.borderLeftColor = "var(--lvlup-danger)";
-                document.getElementById('targetBanner').innerHTML = `
-                    <strong style="color: var(--lvlup-danger); font-size: 24px;">No Tournament Selected</strong>
-                    <p style="color: var(--lvlup-text-muted); margin-top: 10px; font-size: 16px;">Team registration is currently only available for active events.</p>
-                    <a href="index.html" class="btn-outline">Browse Tournaments</a>
-                `;
-                return;
-            }
-
-            targetTourneyId = urlId;
-            try {
-                const tSnap = await getDoc(doc(db, "tournaments", urlId));
-                if (tSnap.exists()) {
-                    targetTourneyName = tSnap.data().title;
-                    btn.innerText = "Submit Roster to Tournament";
-                    btn.disabled = false;
-                    document.getElementById('targetEventName').innerText = targetTourneyName;
-                } else {
-                    formBody.style.display = 'none';
-                    document.getElementById('targetBanner').style.borderLeftColor = "var(--lvlup-danger)";
-                    document.getElementById('targetBanner').innerHTML = `
-                        <strong style="color: var(--lvlup-danger); font-size: 24px;">Invalid Event Entry</strong>
-                        <p style="color: var(--lvlup-text-muted); margin-top: 10px; font-size: 16px;">The tournament you are trying to register for has been removed or does not exist.</p>
-                        <a href="index.html" class="btn-outline">Find an Active Event</a>
-                    `;
+            if (urlId) {
+                // FLOW A: User came from a specific tournament link
+                try {
+                    const tSnap = await getDoc(doc(db, "tournaments", urlId));
+                    if (tSnap.exists()) {
+                        targetTourneyId = urlId;
+                        targetTourneyName = tSnap.data().title;
+                        eventNameLabel.innerText = targetTourneyName;
+                        eventNameLabel.style.display = "block"; // Show text, hide dropdown
+                        eventDropdown.style.display = "none";
+                        btn.innerText = "Submit Roster to Tournament";
+                        btn.disabled = false;
+                    } else {
+                        triggerErrorUI("Invalid Event Entry", "The tournament you are trying to register for has been removed or does not exist.");
+                    }
+                } catch (e) {
+                    eventNameLabel.innerText = "Network Error - Please Refresh";
+                    btn.innerText = "Connection Failed";
                 }
-            } catch (e) {
-                document.getElementById('targetEventName').innerText = "Network Error - Please Refresh";
-                btn.innerText = "Connection Failed";
+            } else {
+                // FLOW B: User navigated directly to register.html without an ID. Enable Dropdown.
+                eventNameLabel.style.display = "none";
+                eventDropdown.style.display = "block";
+                btn.innerText = "Select an Event to Continue";
+                btn.disabled = true;
+
+                try {
+                    // Fetch all tournaments, but filter locally to avoid complex index requirements
+                    const q = query(collection(db, "tournaments"), orderBy("createdAt", "desc"));
+                    const snap = await getDocs(q);
+                    
+                    let activeCount = 0;
+                    snap.forEach(docSnap => {
+                        const data = docSnap.data();
+                        // Only allow registration for non-hidden tournaments that are Upcoming or LIVE
+                        if(!data.isHidden && (data.status === "upcoming" || data.status === "live" || data.status === "Status: Upcoming" || data.status === "Status: LIVE")) {
+                            eventDropdown.innerHTML += `<option value="${docSnap.id}">${data.title}</option>`;
+                            activeCount++;
+                        }
+                    });
+
+                    if(activeCount === 0) {
+                        triggerErrorUI("No Active Tournaments", "There are currently no active tournaments accepting registrations.");
+                    }
+
+                } catch (error) {
+                    console.error("Error loading events for dropdown:", error);
+                }
             }
+        }
+
+        // Listener for the Dropdown Selection
+        eventDropdown.addEventListener('change', (e) => {
+            if(e.target.value) {
+                targetTourneyId = e.target.value;
+                targetTourneyName = e.target.options[e.target.selectedIndex].text;
+                btn.innerText = "Submit Roster to Tournament";
+                btn.disabled = false;
+            } else {
+                targetTourneyId = null;
+                targetTourneyName = "";
+                btn.innerText = "Select an Event to Continue";
+                btn.disabled = true;
+            }
+        });
+
+        // Helper function for dead-end errors
+        function triggerErrorUI(title, message) {
+            formBody.style.display = 'none';
+            document.getElementById('targetBanner').style.borderLeftColor = "var(--lvlup-danger)";
+            document.getElementById('targetBanner').innerHTML = `
+                <strong style="color: var(--lvlup-danger); font-size: 24px;">${title}</strong>
+                <p style="color: var(--lvlup-text-muted); margin-top: 10px; font-size: 16px;">${message}</p>
+                <a href="index.html" class="btn-outline">Browse Tournaments</a>
+            `;
         }
 
         // --- AUTHENTICATION CHECK ---
@@ -137,6 +191,8 @@
 
         // --- SUBMISSION & DUPLICATE CHECKS ---
         document.getElementById('submitTeamBtn').addEventListener('click', async () => {
+            if(!targetTourneyId) return alert("Please select a tournament first.");
+
             const tName = document.getElementById('teamName').value.trim();
             const capIGN = document.getElementById('captainIGN').value.trim();
             const p2 = document.getElementById('player2').value.trim();
