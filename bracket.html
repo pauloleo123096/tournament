@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LVLUP | Live Bracket</title>
+    <style>
+        :root { 
+            --lvlup-bg: #0a0f16; --lvlup-panel: #131c28; 
+            --lvlup-accent: #00ffcc; --lvlup-text: #f8fafc; 
+            --lvlup-text-muted: #64748b; --lvlup-danger: #ef4444; --lvlup-win: #10b981;
+        }
+
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--lvlup-bg); color: var(--lvlup-text); margin: 0; padding: 0; }
+        
+        /* Navigation Bar */
+        nav { background: #05080c; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--lvlup-accent); }
+        .logo { font-size: 24px; font-weight: bold; color: var(--lvlup-accent); text-decoration: none; letter-spacing: 2px; }
+        .nav-links a { color: var(--lvlup-text); text-decoration: none; font-weight: bold; margin-left: 20px; transition: 0.2s; }
+        .nav-links a:hover { color: var(--lvlup-accent); }
+
+        /* Header Area */
+        .bracket-header { padding: 40px; text-align: center; border-bottom: 1px solid #1e293b; background: radial-gradient(circle at top, #131c28 0%, #0a0f16 100%); }
+        .bracket-header h1 { margin: 0 0 10px 0; color: var(--lvlup-accent); font-size: 36px; text-transform: uppercase; letter-spacing: 2px;}
+        .bracket-header p { margin: 0; color: var(--lvlup-text-muted); font-size: 16px; }
+
+        /* Bracket Flexbox Layout */
+        .bracket-container { display: flex; padding: 40px; gap: 50px; overflow-x: auto; min-height: 60vh; align-items: flex-start;}
+        
+        .round-column { display: flex; flex-direction: column; gap: 30px; min-width: 250px; }
+        .round-title { text-align: center; color: var(--lvlup-text-muted); font-size: 14px; text-transform: uppercase; font-weight: bold; margin-bottom: 15px; border-bottom: 1px solid #1e293b; padding-bottom: 5px;}
+        
+        /* Individual Match Card */
+        .match-card { background: var(--lvlup-panel); border: 1px solid #1e293b; border-radius: 8px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .match-id { background: #0f172a; padding: 5px 10px; font-size: 11px; color: var(--lvlup-text-muted); border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between;}
+        
+        .team-row { display: flex; justify-content: space-between; padding: 10px 15px; border-bottom: 1px solid #1e293b; transition: 0.2s; }
+        .team-row:last-child { border-bottom: none; }
+        .team-name { font-weight: bold; font-size: 14px; }
+        .team-score { font-family: monospace; font-size: 16px; font-weight: bold; color: var(--lvlup-text-muted); }
+        
+        /* Winner Highlight Class */
+        .is-winner { background: rgba(16, 185, 129, 0.1); }
+        .is-winner .team-name { color: var(--lvlup-win); }
+        .is-winner .team-score { color: var(--lvlup-win); }
+
+        .empty-state { text-align: center; padding: 80px 20px; color: var(--lvlup-text-muted); width: 100%; font-size: 18px;}
+    </style>
+</head>
+<body>
+
+    <nav>
+        <a href="index.html" class="logo">LVLUP</a>
+        <div class="nav-links">
+            <a href="index.html">Tournaments</a>
+            <a href="login.html">Captain Portal</a>
+        </div>
+    </nav>
+
+    <div class="bracket-header">
+        <h1 id="bTitle">Loading Bracket...</h1>
+        <p id="bStatus">Decrypting live network data</p>
+    </div>
+
+    <div class="bracket-container" id="bracketCanvas">
+        <div class="empty-state">Establishing connection to the tournament database...</div>
+    </div>
+
+    <script type="module">
+        import { db } from './firebase-setup.js';
+        // IMPORT ADDED: onSnapshot for real-time live updates
+        import { doc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const tourneyId = urlParams.get('id');
+
+        const titleEl = document.getElementById('bTitle');
+        const statusEl = document.getElementById('bStatus');
+        const canvas = document.getElementById('bracketCanvas');
+
+        // ==========================================
+        // INITIALIZE BRACKET DATA
+        // ==========================================
+        async function initBracket() {
+            if (!tourneyId) {
+                titleEl.innerText = "NO TOURNAMENT SPECIFIED";
+                statusEl.innerText = "Please return to the home page and select an active event.";
+                canvas.innerHTML = "";
+                return;
+            }
+
+            // 1. Fetch the tournament details for the header
+            try {
+                const tSnap = await getDoc(doc(db, "tournaments", tourneyId));
+                if (tSnap.exists()) {
+                    titleEl.innerText = tSnap.data().title;
+                    statusEl.innerText = "LIVE BRACKET FEED";
+                } else {
+                    titleEl.innerText = "EVENT NOT FOUND";
+                    statusEl.innerText = "This event may have been purged.";
+                    canvas.innerHTML = "";
+                    return;
+                }
+            } catch (e) {
+                console.error("Error fetching tournament meta:", e);
+            }
+
+            // 2. Attach real-time listener to the specific bracket document
+            onSnapshot(doc(db, "brackets", tourneyId), (docSnap) => {
+                if (!docSnap.exists() || !docSnap.data().matches || docSnap.data().matches.length === 0) {
+                    canvas.innerHTML = `<div class="empty-state">The bracket for this event has not been generated yet. Please wait for the Admin to seed the tournament.</div>`;
+                    return;
+                }
+
+                const matches = docSnap.data().matches;
+                renderBracket(matches);
+            });
+        }
+
+        // ==========================================
+        // RENDER LOGIC (DRAWING THE TREE)
+        // ==========================================
+        function renderBracket(matches) {
+            canvas.innerHTML = ""; // Clear canvas
+
+            // Group matches by their round (e.g., "Round 1", "Semi-Finals")
+            const roundsMap = {};
+            matches.forEach(match => {
+                const r = match.round || "Unassigned";
+                if (!roundsMap[r]) roundsMap[r] = [];
+                roundsMap[r].push(match);
+            });
+
+            // Loop through each grouped round and create a column
+            for (const [roundName, roundMatches] of Object.entries(roundsMap)) {
+                
+                // Create the column container
+                const column = document.createElement('div');
+                column.className = 'round-column';
+                column.innerHTML = `<div class="round-title">${roundName}</div>`;
+
+                // Render each match card inside this column
+                roundMatches.forEach(m => {
+                    const t1WinnerClass = m.winner === m.team1Id ? "is-winner" : "";
+                    const t2WinnerClass = m.winner === m.team2Id ? "is-winner" : "";
+                    
+                    // Parse scores. If no score is inputted, show "-"
+                    let s1 = "-", s2 = "-";
+                    if (m.score && m.score.includes("-")) {
+                        const scores = m.score.split("-");
+                        s1 = scores[0].trim();
+                        s2 = scores[1].trim();
+                    }
+
+                    column.innerHTML += `
+                        <div class="match-card">
+                            <div class="match-id">
+                                <span>Match #${m.matchId}</span>
+                                <span>${m.winner ? "FINAL" : "PENDING"}</span>
+                            </div>
+                            <div class="team-row ${t1WinnerClass}">
+                                <span class="team-name">${m.team1 || "TBD"}</span>
+                                <span class="team-score">${s1}</span>
+                            </div>
+                            <div class="team-row ${t2WinnerClass}">
+                                <span class="team-name">${m.team2 || "TBD"}</span>
+                                <span class="team-score">${s2}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                // Append the entire column to the canvas
+                canvas.appendChild(column);
+            }
+        }
+
+        // Execute on load
+        initBracket();
+    </script>
+</body>
+</html>
