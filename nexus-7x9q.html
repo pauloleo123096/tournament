@@ -272,14 +272,14 @@
 
 
         // ==========================================
-        // 2. LIVE BRACKET CONTROL ENGINE (NEW)
+        // 2. LIVE BRACKET CONTROL ENGINE
         // ==========================================
         const liveBracketDropdown = document.getElementById('liveBracketEventDropdown');
         const liveBracketContainer = document.getElementById('bracketMatchesList');
 
         liveBracketDropdown.addEventListener('change', (e) => {
             const tId = e.target.value;
-            if(bracketUnsubscribe) bracketUnsubscribe(); // Kill previous listener
+            if(bracketUnsubscribe) bracketUnsubscribe(); 
             
             if(!tId) {
                 liveBracketContainer.innerHTML = "<p style='color: var(--lvlup-text-muted); font-size:14px;'>Select a tournament to manage matches.</p>";
@@ -295,9 +295,8 @@
                 }
                 
                 const matches = docSnap.data().matches;
-                liveBracketContainer.innerHTML = ""; // Clear existing
+                liveBracketContainer.innerHTML = ""; 
                 
-                // Render a control card for every match in the database
                 matches.forEach(m => {
                     let s1 = "", s2 = "";
                     if(m.score && m.score.includes("-")) {
@@ -339,7 +338,6 @@
             });
         });
 
-        // The core engine for updating scores and advancing teams
         window.saveMatchData = async (tournamentId, matchId) => {
             const score1 = document.getElementById(`score1_${matchId}`).value || "0";
             const score2 = document.getElementById(`score2_${matchId}`).value || "0";
@@ -357,11 +355,9 @@
                 const currentMatch = matches[matchIndex];
                 const previousWinner = currentMatch.winner;
                 
-                // 1. Update the Scores and Winner status
                 matches[matchIndex].score = `${score1} - ${score2}`;
                 matches[matchIndex].winner = winnerId || null;
                 
-                // 2. THE ADVANCEMENT PROMPT: Ask admin if they want to push this winner to a future match
                 if (winnerId && winnerId !== previousWinner) {
                     const targetMatchIdStr = prompt(`WINNER DECLARED!\n\nDo you want to automatically push this winner to the next round?\nEnter the target Match ID number (or click Cancel to skip):`);
                     
@@ -376,10 +372,16 @@
                             if (slot === '1') {
                                 matches[targetMatchIndex].team1 = winnerName;
                                 matches[targetMatchIndex].team1Id = winnerId;
+                                // BUG FIX 1: Clear existing target slot data
+                                matches[targetMatchIndex].score = "";
+                                matches[targetMatchIndex].winner = null;
                                 alert(`Winner successfully pushed to Match #${targetMatchId} (Team A slot)!`);
                             } else if (slot === '2') {
                                 matches[targetMatchIndex].team2 = winnerName;
                                 matches[targetMatchIndex].team2Id = winnerId;
+                                // BUG FIX 1: Clear existing target slot data
+                                matches[targetMatchIndex].score = "";
+                                matches[targetMatchIndex].winner = null;
                                 alert(`Winner successfully pushed to Match #${targetMatchId} (Team B slot)!`);
                             } else {
                                 alert("Invalid slot selection. The winner's match was updated, but they were not pushed forward.");
@@ -390,7 +392,6 @@
                     }
                 }
                 
-                // 3. Save the entire array back to Firestore
                 await updateDoc(bracketRef, { matches: matches, lastUpdated: new Date().toISOString() });
                 
             } catch (e) {
@@ -464,17 +465,16 @@
             } catch (e) { msg.style.color = "red"; msg.innerText = "Error: " + e.message; }
         });
 
-        // Pulls tournaments and populates all FOUR dropdowns (Filter, MatchBuilder, LiveBracket Control, Stream)
         function loadTournaments() {
             onSnapshot(query(collection(db, "tournaments"), orderBy("createdAt", "desc")), (snapshot) => {
                 const tbody = document.getElementById('tourneyTableBody'); 
                 const filterDropdown = document.getElementById('teamFilterDropdown');
                 const manualEventSelect = document.getElementById('manualMatchEvent'); 
-                const liveBracketSelect = document.getElementById('liveBracketEventDropdown'); // NEW
+                const liveBracketSelect = document.getElementById('liveBracketEventDropdown');
                 
                 const currentFilter = filterDropdown.value; 
                 const currentManual = manualEventSelect.value;
-                const currentLive = liveBracketSelect.value; // Store state
+                const currentLive = liveBracketSelect.value; 
                 
                 tbody.innerHTML = "";
                 filterDropdown.innerHTML = '<option value="all">View All Events</option>'; 
@@ -505,7 +505,6 @@
                     liveBracketSelect.innerHTML += optionHtml;
                 });
 
-                // Restore previous selections
                 if(currentFilter !== "all" && filterDropdown.querySelector(`option[value="${currentFilter}"]`)) filterDropdown.value = currentFilter;
                 if(currentManual !== "" && manualEventSelect.querySelector(`option[value="${currentManual}"]`)) manualEventSelect.value = currentManual;
                 if(currentLive !== "" && liveBracketSelect.querySelector(`option[value="${currentLive}"]`)) liveBracketSelect.value = currentLive;
@@ -586,6 +585,12 @@
                 }, { merge: true });
 
                 alert(`Success! Generated Round 1 with ${matches.length} matches.`);
+
+                // BUG FIX 2: Trigger Live Match UI to refresh automatically if this event is currently selected
+                const liveBracketSelect = document.getElementById('liveBracketEventDropdown');
+                if (liveBracketSelect && liveBracketSelect.value === tournamentId) {
+                    liveBracketSelect.dispatchEvent(new Event('change'));
+                }
 
             } catch (error) {
                 alert("Error generating bracket: " + error.message);
